@@ -1,0 +1,27 @@
+# PowerShell
+*.ps1.bak
+*.psm1.bak
+*.psd1.bak
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# Logs et fichiers temporaires
+*.log
+*.tmp
+temp/
+logs/
+
+# Fichiers de configuration locaux
+config.local.json
+*.local.ps1
+
+# Dossiers de build et de test
+build/
+coverage/
+test-results/ 
