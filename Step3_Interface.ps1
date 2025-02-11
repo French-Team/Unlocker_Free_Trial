@@ -450,6 +450,10 @@ function Show-CustomDialog {
     $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
     $form.MaximizeBox = $false
     $form.MinimizeBox = $false
+    $form.TopMost = $true  # Forcer la fenêtre au premier plan
+    $form.Focus()          # Donner le focus à la fenêtre
+    $form.BringToFront()   # Forcer la fenêtre au premier plan
+    $form.Activate()       # Activer la fenêtre
 
     $label = New-Object System.Windows.Forms.Label
     $label.Location = New-Object System.Drawing.Point(20,20)
@@ -494,6 +498,13 @@ function Show-CustomDialog {
 
     $form.AcceptButton = $btnOK
     $form.CancelButton = $btnCancel
+
+    # Ajouter un gestionnaire d'événements pour le chargement de la fenêtre
+    $form.Add_Load({
+        $this.Activate()
+        $this.BringToFront()
+        $this.Focus()
+    })
 
     return $form.ShowDialog()
 } 
