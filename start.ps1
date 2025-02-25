@@ -8,6 +8,14 @@
 $ErrorActionPreference = "Stop"
 $script:scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 
+# Importer les fonctions Windows nécessaires pour cacher la console
+Add-Type -Name Window -Namespace Console -MemberDefinition '
+[DllImport("Kernel32.dll")]
+public static extern IntPtr GetConsoleWindow();
+[DllImport("user32.dll")]
+public static extern bool ShowWindow(IntPtr hWnd, Int32 nCmdShow);
+'
+
 # Vérification des droits administrateur
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
@@ -20,6 +28,14 @@ if (-not $isAdmin) {
         Write-Host "❌ Error lors du redémarrage en mode administrateur: $_" -ForegroundColor Red
         exit 1
     }
+}
+
+# Cacher la fenêtre console immédiatement après vérification des droits admin
+if (-not $env:TEST_MODE) {
+    # Obtenir le handle de la fenêtre console
+    $consolePtr = [Console.Window]::GetConsoleWindow()
+    # Constante pour ShowWindow (0 = SW_HIDE)
+    [Console.Window]::ShowWindow($consolePtr, 0)
 }
 
 Write-Host "Interface lancée en mode administrateur"
@@ -54,26 +70,6 @@ Add-Type -AssemblyName System.Drawing
 
 # Point d'entrée principal
 if ($MyInvocation.InvocationName -ne '.' -and -not $env:TEST_MODE) {
-    # ===== DÉBUT CODE POUR CACHER LA FENÊTRE DES LOGS =====
-    # Importer les fonctions Windows nécessaires
-    Add-Type -Name Window -Namespace Console -MemberDefinition '
-    [DllImport("Kernel32.dll")]
-    public static extern IntPtr GetConsoleWindow();
-    [DllImport("user32.dll")]
-    public static extern bool ShowWindow(IntPtr hWnd, Int32 nCmdShow);
-    '
-
-    # Obtenir le handle de la fenêtre console
-    $consolePtr = [Console.Window]::GetConsoleWindow()
-
-    # Constantes pour ShowWindow
-    $SW_HIDE = 0
-    $SW_SHOW = 5
-
-    # Cacher la fenêtre console immédiatement
-    [Console.Window]::ShowWindow($consolePtr, $SW_HIDE)
-    # ===== FIN CODE POUR CACHER LA FENÊTRE DES LOGS =====
-
     # Configuration de Windows Forms
     [System.Windows.Forms.Application]::EnableVisualStyles()
     [System.Windows.Forms.Application]::SetCompatibleTextRenderingDefault($false)

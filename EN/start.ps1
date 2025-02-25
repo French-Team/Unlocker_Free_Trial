@@ -8,6 +8,14 @@
 $ErrorActionPreference = "Stop"
 $script:scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 
+# Import required Windows functions to hide console window
+Add-Type -Name Window -Namespace Console -MemberDefinition '
+[DllImport("Kernel32.dll")]
+public static extern IntPtr GetConsoleWindow();
+[DllImport("user32.dll")]
+public static extern bool ShowWindow(IntPtr hWnd, Int32 nCmdShow);
+'
+
 # Check for administrator rights
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
@@ -20,6 +28,14 @@ if (-not $isAdmin) {
         Write-Host "❌ Error during administrator restart: $_" -ForegroundColor Red
         exit 1
     }
+}
+
+# Hide console window immediately after admin check
+if (-not $env:TEST_MODE) {
+    # Get console window handle
+    $consolePtr = [Console.Window]::GetConsoleWindow()
+    # Hide console window
+    [Console.Window]::ShowWindow($consolePtr, 0)
 }
 
 # Message display function
@@ -51,26 +67,6 @@ Add-Type -AssemblyName System.Drawing
 
 # Main entry point
 if ($MyInvocation.InvocationName -ne '.' -and -not $env:TEST_MODE) {
-    # ===== START CODE TO HIDE LOGS WINDOW =====
-    # Import required Windows functions
-    Add-Type -Name Window -Namespace Console -MemberDefinition '
-    [DllImport("Kernel32.dll")]
-    public static extern IntPtr GetConsoleWindow();
-    [DllImport("user32.dll")]
-    public static extern bool ShowWindow(IntPtr hWnd, Int32 nCmdShow);
-    '
-
-    # Get console window handle
-    $consolePtr = [Console.Window]::GetConsoleWindow()
-
-    # Constants for ShowWindow
-    $SW_HIDE = 0
-    $SW_SHOW = 5
-
-    # Hide console window immediately
-    [Console.Window]::ShowWindow($consolePtr, $SW_HIDE)
-    # ===== END CODE TO HIDE LOGS WINDOW =====
-
     # Windows Forms configuration
     [System.Windows.Forms.Application]::EnableVisualStyles()
     [System.Windows.Forms.Application]::SetCompatibleTextRenderingDefault($false)

@@ -40,7 +40,34 @@ git clone https://github.com/French-Team/Unlocker_Free_Trial.git
 # Accéder au dossier
 cd Unlocker_Free_Trial
 
-# Lancer l'application
+## Démarrage de l'application
+
+### Méthode recommandée : Utiliser le launcher
+
+Pour une expérience optimale, utilisez toujours le fichier `launcher.bat` fourni pour démarrer l'application. Ce fichier permet de lancer l'application sans afficher la fenêtre console PowerShell.
+
+1. Double-cliquez simplement sur `launcher.bat`
+2. L'interface graphique s'ouvrira directement, sans fenêtre console visible
+
+### Autres méthodes de lancement
+
+Si vous lancez directement le fichier `start.ps1`, une fenêtre PowerShell apparaîtra brièvement avant que l'interface ne s'ouvre. Cette fenêtre est nécessaire pour exécuter le script mais peut être gênante visuellement.
+
+Pour créer un raccourci personnalisé :
+1. Cliquez-droit sur votre bureau → Nouveau → Raccourci
+2. Dans le champ "Emplacement de l'élément", entrez :
+   ```
+   powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File "C:\chemin\complet\vers\start.ps1"
+   ```
+   (remplacez par le chemin réel vers votre fichier start.ps1)
+3. Donnez un nom à votre raccourci et validez
+
+### Note pour les développeurs
+
+En mode développement, vous pouvez définir la variable d'environnement `TEST_MODE` pour garder la console visible et voir les logs : 
+
+```powershell
+$env:TEST_MODE = "true"
 .\start.ps1
 ```
 
@@ -81,4 +108,7 @@ French Team - french.team.ai@gmail.com
 
 *Made with ❤️ by French Team*
 
-</div> 
+</div>
+
+
+
