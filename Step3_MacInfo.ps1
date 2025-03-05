@@ -47,58 +47,37 @@ function Get-CurrentMacInfo {
 
 # ===== Magasin d'affichage =====
 function Update-MacInfoLabel {
-    param (
-        [System.Windows.Forms.Label]$Label
-    )
-    
     Write-Host "🏪 Accès au magasin d'affichage..." -ForegroundColor Cyan
     
     try {
-        # Vérifier si le label existe
-        if ($null -eq $Label) {
-            Write-Host "  ⚠️ Label non défini" -ForegroundColor Yellow
-            return
-        }
-
         # Rayon mise en forme
         Write-Host "  🎨 Mise en forme des informations..." -ForegroundColor Gray
         $macInfo = Get-CurrentMacInfo
         
         if ($macInfo.Success) {
             # Rayon formatage réussi
-            $infoText = @"
-Adaptateur actif: $($macInfo.Description)
-Adresse MAC: $($macInfo.MacAddress)
-Status: $($macInfo.Status)
-"@
-            # Mise à jour sécurisée du texte
-            if ($Label.IsHandleCreated) {
-                $Label.Invoke([Action]{$Label.Text = $infoText})
-            } else {
-                $Label.Text = $infoText
+            Write-Host "  ✓ Informations récupérées avec succès" -ForegroundColor Green
+            return @{
+                Success = $true
+                Text = "$($global:Translations[$global:CurrentLanguage]['NetworkCard']) : $($macInfo.Description)`n$($global:Translations[$global:CurrentLanguage]['MacAddress']) : $($macInfo.MacAddress)"
             }
-            Write-Host "  ✓ Informations mises à jour avec succès" -ForegroundColor Green
         } 
         else {
             # Rayon messages d'erreur
-            if ($Label.IsHandleCreated) {
-                $Label.Invoke([Action]{$Label.Text = $macInfo.Message})
-            } else {
-                $Label.Text = $macInfo.Message
+            Write-Host "  ⚠️ Erreur lors de la récupération des informations" -ForegroundColor Yellow
+            return @{
+                Success = $false
+                Text = $global:Translations[$global:CurrentLanguage]['NoNetwork']
             }
-            Write-Host "  ⚠️ Affichage du message d'erreur" -ForegroundColor Yellow
         }
     }
     catch {
         # Caisse des erreurs d'affichage
         Write-Host "  ❌ Error lors de la mise à jour de l'affichage: $_" -ForegroundColor Red
-        try {
-            if ($Label.IsHandleCreated) {
-                $Label.Invoke([Action]{$Label.Text = "Unable to retrieve network information"})
-            } else {
-                $Label.Text = "Unable to retrieve network information"
-            }
-        } catch { }
+        return @{
+            Success = $false
+            Text = $global:Translations[$global:CurrentLanguage]['NetworkError']
+        }
     }
 } 
 

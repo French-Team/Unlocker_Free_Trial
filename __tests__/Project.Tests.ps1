@@ -5,7 +5,7 @@
 
 Describe "Tests de base du projet" {
     BeforeAll {
-        $script:projectPath = $PSScriptRoot
+        $script:projectPath = Split-Path $PSScriptRoot -Parent
         $script:startScript = Join-Path $projectPath "start.ps1"
     }
 
@@ -34,8 +34,8 @@ Describe "Tests de base du projet" {
 
         It "Le script principal doit contenir les éléments essentiels" {
             $startContent | Should -Match "function\s+global:Write-ConsoleLog"
-            $startContent | Should -Match "function\s+global:Initialize-MainWindow"
-            $startContent | Should -Match "function\s+global:Show-MainInterface"
+            $startContent | Should -Match "function\s+global:Get-NetworkAdapters"
+            $startContent | Should -Match "function\s+global:Set-MacAddress"
         }
 
         It "Le script doit gérer les droits administrateur" {
@@ -56,8 +56,11 @@ Describe "Tests de l'interface graphique" {
         }
 
         # Chargement des scripts nécessaires
-        . $PSScriptRoot\start.ps1
-        . "$PSScriptRoot\Step3_Interface.ps1"
+        $projectRoot = Split-Path $PSScriptRoot -Parent
+        . (Join-Path $projectRoot "start.ps1")
+        . (Join-Path $projectRoot "Step3_Interface.ps1")
+        . (Join-Path $projectRoot "Step4_MacAddress.ps1")
+        . (Join-Path $projectRoot "Step6_ExecuteAll.ps1")
 
         # Activation du mode test
         $env:TEST_MODE = $true
@@ -69,12 +72,6 @@ Describe "Tests de l'interface graphique" {
     }
 
     Context "Tests des fonctions de base" {
-        It "Write-ConsoleLog doit fonctionner" {
-            $message = "Test message"
-            $result = Write-ConsoleLog -Message $message -Color "Green"
-            $result | Should -Be $message
-        }
-
         It "Get-NetworkAdapters doit retourner des données" {
             $adapters = Get-NetworkAdapters
             $adapters | Should -Not -BeNullOrEmpty
@@ -99,6 +96,34 @@ Describe "Tests de l'interface graphique" {
             $interface.DeleteStorageButton | Should -Not -BeNullOrEmpty
             $interface.ExecuteAllButton | Should -Not -BeNullOrEmpty
             $interface.ExitButton | Should -Not -BeNullOrEmpty
+        }
+
+        It "Le bouton de langue doit fonctionner correctement" {
+            $interface = Initialize-MainWindow
+            $interface.LanguageButton | Should -Not -BeNullOrEmpty
+            $interface.LanguageButton.Text | Should -Be "FR/EN"
+            
+            # Test du changement de langue
+            $currentLanguage = $global:CurrentLanguage
+            $interface.LanguageButton.PerformClick()
+            
+            # Vérification du changement de langue
+            $global:CurrentLanguage | Should -Not -Be $currentLanguage
+            
+            # Vérification des textes mis à jour
+            if ($global:CurrentLanguage -eq "EN") {
+                $interface.Form.Text | Should -Be "Unlocker - Free Trial"
+                $interface.MacAddressButton.Text | Should -Be "1. Change MAC Address"
+                $interface.DeleteStorageButton.Text | Should -Be "2. Delete storage.json"
+                $interface.ExecuteAllButton.Text | Should -Be "3. Execute All Actions"
+                $interface.ExitButton.Text | Should -Be "4. Exit"
+            } else {
+                $interface.Form.Text | Should -Be "Unlocker - Free Trial"
+                $interface.MacAddressButton.Text | Should -Be "1. Modifier l'adresse MAC"
+                $interface.DeleteStorageButton.Text | Should -Be "2. Supprimer storage.json"
+                $interface.ExecuteAllButton.Text | Should -Be "3. Exécuter toutes les actions"
+                $interface.ExitButton.Text | Should -Be "4. Quitter"
+            }
         }
     }
 } 

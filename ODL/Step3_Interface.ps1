@@ -6,6 +6,39 @@
 #              - Events shop (clicks, hovers)
 # =================================================================
 
+# Variables globales pour la langue
+$global:CurrentLanguage = "EN"
+$global:Translations = @{
+    "FR" = @{
+        "WindowTitle" = "Unlocker - Free Trial"
+        "MainTitle" = "Unlocker Free Trial"
+        "Subtitle" = "pour Cursor"
+        "BtnMacAddress" = "1. Modifier l'adresse MAC"
+        "BtnDeleteStorage" = "2. Supprimer storage.json"
+        "BtnExecuteAll" = "3. Exécuter toutes les actions"
+        "BtnExit" = "4. Quitter"
+        "Ready" = "Prêt"
+        "NetworkCard" = "Carte réseau active"
+        "MacAddress" = "Adresse MAC"
+        "NoNetwork" = "Aucune carte réseau active trouvée"
+        "NetworkError" = "Impossible de récupérer les informations réseau"
+    }
+    "EN" = @{
+        "WindowTitle" = "Unlocker - Free Trial"
+        "MainTitle" = "Unlocker Free Trial"
+        "Subtitle" = "for Cursor"
+        "BtnMacAddress" = "1. Change MAC Address"
+        "BtnDeleteStorage" = "2. Delete storage.json"
+        "BtnExecuteAll" = "3. Execute All Actions"
+        "BtnExit" = "4. Exit"
+        "Ready" = "Ready"
+        "NetworkCard" = "Active Network Card"
+        "MacAddress" = "MAC Address"
+        "NoNetwork" = "No active network card found"
+        "NetworkError" = "Unable to retrieve network information"
+    }
+}
+
 function Initialize-MainWindow {
     try {
         # ===== Main components shop =====
@@ -13,7 +46,7 @@ function Initialize-MainWindow {
         
         # Main window section
         $mainForm = New-Object System.Windows.Forms.Form
-        $mainForm.Text = "Unlocker - Free Trial"
+        $mainForm.Text = $global:Translations[$global:CurrentLanguage]["WindowTitle"]
         $mainForm.Size = New-Object System.Drawing.Size(800,600)
         $mainForm.StartPosition = "CenterScreen"
         $mainForm.BackColor = [System.Drawing.Color]::FromArgb(30,30,30)  # Dark gray
@@ -47,7 +80,7 @@ function Initialize-MainWindow {
         
         # Title section
         $titleLabel = New-Object System.Windows.Forms.Label
-        $titleLabel.Text = "Unlocker Free Trial"
+        $titleLabel.Text = $global:Translations[$global:CurrentLanguage]["MainTitle"]
         $titleLabel.Font = New-Object System.Drawing.Font("Segoe UI Light", 32)
         $titleLabel.ForeColor = [System.Drawing.Color]::White
         $titleLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
@@ -57,7 +90,7 @@ function Initialize-MainWindow {
 
         # Subtitle
         $subtitleLabel = New-Object System.Windows.Forms.Label
-        $subtitleLabel.Text = "for Cursor"
+        $subtitleLabel.Text = $global:Translations[$global:CurrentLanguage]["Subtitle"]
         $subtitleLabel.Font = New-Object System.Drawing.Font("Segoe UI Light", 16)
         $subtitleLabel.ForeColor = [System.Drawing.Color]::FromArgb(150,150,150)  # Lighter gray
         $subtitleLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
@@ -107,25 +140,47 @@ function Initialize-MainWindow {
         # ===== Styles shop =====
         Write-Host "`n🏪 Configuring styles..." -ForegroundColor Cyan
         
-        # Button dimensions section
+        # Section dimensions des boutons
         $buttonWidth = 600
         $buttonHeight = 35
-        $buttonX = ($mainPanel.Width - $buttonWidth) / 2
-        $buttonStartY = 230
-        $buttonSpacing = 60
+        $buttonX = [int](($mainPanel.Width - $buttonWidth) / 2)
+        $buttonStartY = 200  # Réduit l'espace vide
+        $buttonSpacing = 45  # Réduit l'espacement
 
-        # Button factory section
+        # Section fabrique de boutons
         function Create-StyledButton {
             param(
+                [Parameter(Mandatory=$true)]
                 [string]$text,
-                [int]$y,
-                [System.Drawing.Color]$customBackColor = [System.Drawing.Color]::FromArgb(50,50,50)  # Light gray for buttons
+                [Parameter(Mandatory=$false)]
+                [int]$y = 0,
+                [Parameter(Mandatory=$false)]
+                [int]$width = 0,
+                [Parameter(Mandatory=$false)]
+                [int]$height = 0,
+                [Parameter(Mandatory=$false)]
+                [int]$x = 0,
+                [Parameter(Mandatory=$false)]
+                [System.Drawing.Color]$customBackColor = [System.Drawing.Color]::FromArgb(50,50,50)
             )
             
             try {
                 $button = New-Object System.Windows.Forms.Button
-                $button.Size = New-Object System.Drawing.Size($buttonWidth, $buttonHeight)
-                $button.Location = New-Object System.Drawing.Point($buttonX, $y)
+                
+                # Gestion de la taille
+                if ($width -gt 0 -and $height -gt 0) {
+                    $button.Size = New-Object System.Drawing.Size($width, $height)
+                } else {
+                    $button.Size = New-Object System.Drawing.Size($buttonWidth, $buttonHeight)
+                }
+
+                # Gestion de la position
+                if ($x -gt 0 -and $y -gt 0) {
+                    $button.Location = New-Object System.Drawing.Point($x, $y)
+                } elseif ($y -gt 0) {
+                    $button.Location = New-Object System.Drawing.Point($buttonX, $y)
+                }
+
                 $button.Text = $text
                 $button.Font = New-Object System.Drawing.Font("Segoe UI Light", 11)
                 $button.ForeColor = [System.Drawing.Color]::White  # White text
@@ -165,15 +220,42 @@ function Initialize-MainWindow {
         # Determine button text based on current location
         $currentPath = $PSScriptRoot
         $isInEnglishFolder = $currentPath.EndsWith('\EN')
-        $languageButtonText = if ($isInEnglishFolder) { "Switch to French version" } else { "Switch to English version" }
-        $btnLanguage = Create-StyledButton $languageButtonText $buttonStartY
-        $btnMacAddress = Create-StyledButton "1. Change MAC address of a network adapter" ($buttonStartY + $buttonSpacing)
-        $btnDeleteStorage = Create-StyledButton "2. Delete storage.json file" ($buttonStartY + $buttonSpacing * 2)
+
+        # Bouton de langue (FR/EN) - Création séparée des autres boutons
+        $btnLanguage = New-Object System.Windows.Forms.Button
+        $btnLanguage.Size = New-Object System.Drawing.Size(70, 35)
+        $btnLanguage.Location = New-Object System.Drawing.Point(($mainPanel.Width - 80), 10)
+        $btnLanguage.Text = "FR/EN"
+        $btnLanguage.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Regular)
+        $btnLanguage.ForeColor = [System.Drawing.Color]::White
+        $btnLanguage.BackColor = [System.Drawing.Color]::FromArgb(50,50,50)
+        $btnLanguage.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+        $btnLanguage.FlatAppearance.BorderSize = 1
+        $btnLanguage.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(60,60,60)
+        $btnLanguage.FlatAppearance.MouseOverBackColor = [System.Drawing.Color]::FromArgb(60,60,60)
+        $btnLanguage.FlatAppearance.MouseDownBackColor = [System.Drawing.Color]::FromArgb(70,70,70)
+        $btnLanguage.Cursor = [System.Windows.Forms.Cursors]::Hand
+        $btnLanguage.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Right
+
+        # Effet de survol pour le bouton de langue
+        $btnLanguage.Add_MouseEnter({
+            $this.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255,140,0)
+        })
+        
+        $btnLanguage.Add_MouseLeave({
+            $this.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(60,60,60)
+        })
+
+        # Ajout immédiat du bouton de langue au panneau
+        $mainPanel.Controls.Add($btnLanguage)
+
+        $btnMacAddress = Create-StyledButton $global:Translations[$global:CurrentLanguage]["BtnMacAddress"] $buttonStartY $buttonWidth $buttonHeight $buttonX
+        $btnDeleteStorage = Create-StyledButton $global:Translations[$global:CurrentLanguage]["BtnDeleteStorage"] ($buttonStartY + $buttonSpacing)
         Write-Host "✓ Standard buttons created" -ForegroundColor Green
 
         # Special buttons section
-        $btnExecuteAll = Create-StyledButton "3. Execute all actions" ($buttonStartY + $buttonSpacing * 3) ([System.Drawing.Color]::FromArgb(255,140,0))  # Orange
-        $btnExit = Create-StyledButton "4. Exit" ($buttonStartY + $buttonSpacing * 4) ([System.Drawing.Color]::FromArgb(185,45,45))  # Red
+        $btnExecuteAll = Create-StyledButton $global:Translations[$global:CurrentLanguage]["BtnExecuteAll"] ($buttonStartY + $buttonSpacing * 3) ([System.Drawing.Color]::FromArgb(255,140,0))  # Orange
+        $btnExit = Create-StyledButton $global:Translations[$global:CurrentLanguage]["BtnExit"] ($buttonStartY + $buttonSpacing * 4) ([System.Drawing.Color]::FromArgb(185,45,45))  # Red
         Write-Host "✓ Special buttons created" -ForegroundColor Green
 
         # ===== Events shop =====
@@ -320,9 +402,47 @@ on cursor.com
                 if ($isInEnglishFolder) {
                     # If in EN, start FR version at root
                     $startPath = Join-Path (Split-Path $currentPath -Parent) "start.ps1"
+                    $global:CurrentLanguage = "FR"
                 } else {
                     # If at root, start EN version
                     $startPath = Join-Path $currentPath "EN\start.ps1"
+                    $global:CurrentLanguage = "EN"
+                }
+
+                # Update interface texts
+                $mainForm = $this.FindForm()
+                if ($mainForm) {
+                    $mainForm.Text = $global:Translations[$global:CurrentLanguage]["WindowTitle"]
+                    foreach ($control in $mainForm.Controls) {
+                        if ($control -is [System.Windows.Forms.Panel]) {
+                            foreach ($panelControl in $control.Controls) {
+                                if ($panelControl -is [System.Windows.Forms.Label]) {
+                                    if ($panelControl.Font.Size -eq 32) {
+                                        $panelControl.Text = $global:Translations[$global:CurrentLanguage]["MainTitle"]
+                                    }
+                                    elseif ($panelControl.Font.Size -eq 16) {
+                                        $panelControl.Text = $global:Translations[$global:CurrentLanguage]["Subtitle"]
+                                    }
+                                }
+                                elseif ($panelControl -is [System.Windows.Forms.Button]) {
+                                    switch ($panelControl.Text) {
+                                        "1. Change MAC address of a network adapter" { 
+                                            $panelControl.Text = $global:Translations[$global:CurrentLanguage]["BtnMacAddress"]
+                                        }
+                                        "2. Delete storage.json file" { 
+                                            $panelControl.Text = $global:Translations[$global:CurrentLanguage]["BtnDeleteStorage"]
+                                        }
+                                        "3. Execute all actions" { 
+                                            $panelControl.Text = $global:Translations[$global:CurrentLanguage]["BtnExecuteAll"]
+                                        }
+                                        "4. Exit" { 
+                                            $panelControl.Text = $global:Translations[$global:CurrentLanguage]["BtnExit"]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 # Check if script exists
@@ -347,9 +467,8 @@ on cursor.com
                 Start-Sleep -Seconds 1
                 
                 # Close current instance
-                $currentForm = $this.FindForm()
-                if ($currentForm) {
-                    $currentForm.Close()
+                if ($mainForm) {
+                    $mainForm.Close()
                     [System.Windows.Forms.Application]::Exit()
                     [Environment]::Exit(0)
                 }
@@ -385,7 +504,7 @@ on cursor.com
             Write-Host "✓ MAC information updated" -ForegroundColor Green
         }
         catch {
-            $macInfoLabel.Text = "Unable to retrieve network information"
+            $macInfoLabel.Text = $global:Translations[$global:CurrentLanguage]["NetworkError"]
             Write-Host "⚠️ Error updating MAC" -ForegroundColor Yellow
         }
 

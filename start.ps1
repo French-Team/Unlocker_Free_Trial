@@ -63,9 +63,9 @@ Add-Type -AssemblyName System.Drawing
 # Importation des modules nécessaires
 . "$PSScriptRoot\Step1_AdminCheck.ps1"
 . "$PSScriptRoot\Step2_UTF8.ps1"
+. "$PSScriptRoot\Step4_MacAddress.ps1"
 . "$PSScriptRoot\Step3_MacInfo.ps1"
 . "$PSScriptRoot\Step3_Interface.ps1"
-. "$PSScriptRoot\Step4_MacAddress.ps1"
 . "$PSScriptRoot\Step4_MacAddressGUI.ps1"
 
 # Point d'entrée principal

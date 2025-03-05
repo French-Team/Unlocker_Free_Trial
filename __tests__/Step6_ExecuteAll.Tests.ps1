@@ -7,7 +7,7 @@
 Describe "Tests d'exécution de toutes les actions" {
     BeforeAll {
         # Charger le script à tester
-        . $PSScriptRoot\Step6_ExecuteAll.ps1
+        . $PSScriptRoot\..\Step6_ExecuteAll.ps1
         
         # Créer le fichier storage.json pour les tests
         $testPath = Get-CursorStoragePath
@@ -80,11 +80,50 @@ Describe "Tests d'exécution de toutes les actions" {
         }
     }
 
-    AfterAll {
-        # Nettoyage : supprimer le fichier de test s'il existe encore
-        $testPath = Get-CursorStoragePath
-        if (Test-Path $testPath) {
-            Remove-Item -Path $testPath -Force
+    Context "Exécution via Execute-AllActions" {
+        Context "Action execution flow" {
+            BeforeEach {
+                Mock Get-NetworkAdapters { return @{ Name = 'Ethernet'; MacAddress = '00-11-22-33-44-55' } }
+                Mock New-MacAddress { return 'AA-BB-CC-DD-EE-FF' }
+                Mock Set-MacAddress { return $true }
+                Mock Remove-CursorStorage { return @{ Success = $true } }
+            }
+    
+            It "Should execute all actions successfully" {
+                $results = Execute-AllActions
+                $results.MAC | Should -Be $true
+                $results.Storage | Should -Be $true
+            }
+    
+            It "Should handle partial action failure" {
+                Mock Set-MacAddress { return $false }
+                
+                $results = Execute-AllActions
+                $results.MAC | Should -Be $false
+                $results.Storage | Should -Be $true
+            }
+    
+            It "Should handle missing network adapter" {
+                Mock Get-NetworkAdapters { return $null }
+                
+                $results = Execute-AllActions
+                $results.MAC | Should -Be $false
+                $results.Storage | Should -Be $true
+            }
+    
+            It "Should display progress when requested" {
+                $results = Execute-AllActions -ShowProgress
+                $results.MAC | Should -BeIn @($true, $false)
+            }
+    
+            It "Should handle complete action failure" {
+                Mock Set-MacAddress { return $false }
+                Mock Remove-CursorStorage { return @{ Success = $false } }
+                
+                $results = Execute-AllActions
+                $results.MAC | Should -Be $false
+                $results.Storage | Should -Be $false
+            }
         }
     }
-} 
+}

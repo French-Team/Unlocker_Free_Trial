@@ -7,9 +7,10 @@
 
 function Set-ConsoleEncoding {
     try {
-        # Définir la culture en français
-        [System.Threading.Thread]::CurrentThread.CurrentUICulture = 'fr-FR'
-        [System.Threading.Thread]::CurrentThread.CurrentCulture = 'fr-FR'
+        # Définir la culture en fonction de la langue sélectionnée
+        $culture = if ($global:CurrentLanguage -eq "FR") { "fr-FR" } else { "en-US" }
+        [System.Threading.Thread]::CurrentThread.CurrentUICulture = $culture
+        [System.Threading.Thread]::CurrentThread.CurrentCulture = $culture
 
         # Configurer l'encodage pour la console Windows
         $null = cmd /c '' # Vide le buffer de la console

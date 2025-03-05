@@ -1,188 +1,258 @@
 # =================================================================
 # Fichier     : Step3_Interface.ps1
-# Role        : Galerie marchande de l'interface graphique
-# Magasins    : - Magasin des composants (fenêtres, panels)
-#               - Magasin des styles (boutons, labels)
-#               - Magasin des événements (clicks, survols)
+# Role        : Boutique spécialisée de l'interface utilisateur
+# Magasins    : - Magasin des composants (fenêtres, panneaux)
+#               - Magasin des styles (boutons, étiquettes)
+#               - Magasin des événements (clics, survols)
 # =================================================================
 
-function Initialize-MainWindow {
+# Charger les dépendances seulement si on n'est pas en mode test
+if (-not $env:TEST_MODE) {
+    Add-Type -AssemblyName System.Windows.Forms
+    Add-Type -AssemblyName System.Drawing
+}
+
+# Variables globales pour la langue
+$global:CurrentLanguage = "FR"
+$global:Translations = @{
+    "FR" = @{
+        "WindowTitle" = "Unlocker - Free Trial"
+        "MainTitle" = "Unlocker Free Trial"
+        "Subtitle" = "pour Cursor"
+        "BtnMacAddress" = "1. Modifier l'adresse MAC"
+        "BtnDeleteStorage" = "2. Supprimer storage.json"
+        "BtnExecuteAll" = "3. Exécuter toutes les actions"
+        "BtnExit" = "4. Quitter"
+        "Ready" = "Prêt"
+        "NetworkCard" = "Carte réseau active"
+        "MacAddress" = "Adresse MAC"
+        "NoNetwork" = "Aucune carte réseau active trouvée"
+        "NetworkError" = "Impossible de récupérer les informations réseau"
+    }
+    "EN" = @{
+        "WindowTitle" = "Unlocker - Free Trial"
+        "MainTitle" = "Unlocker Free Trial"
+        "Subtitle" = "for Cursor"
+        "BtnMacAddress" = "1. Change MAC Address"
+        "BtnDeleteStorage" = "2. Delete storage.json"
+        "BtnExecuteAll" = "3. Execute All Actions"
+        "BtnExit" = "4. Exit"
+        "Ready" = "Ready"
+        "NetworkCard" = "Active Network Card"
+        "MacAddress" = "MAC Address"
+        "NoNetwork" = "No active network card found"
+        "NetworkError" = "Unable to retrieve network information"
+    }
+}
+
+function global:Initialize-MainWindow {
     try {
         # ===== Magasin des composants principaux =====
         Write-Host "🏪 Création des composants principaux..." -ForegroundColor Cyan
         
-        # Rayon fenêtre principale
+        # Section fenêtre principale
         $mainForm = New-Object System.Windows.Forms.Form
-        $mainForm.Text = "Unlocker - Free Trial"
-        $mainForm.Size = New-Object System.Drawing.Size(800,600)
+        $mainForm.Text = $global:Translations[$global:CurrentLanguage]["WindowTitle"]
+        $mainForm.Size = New-Object System.Drawing.Size(700,550) 
         $mainForm.StartPosition = "CenterScreen"
-        $mainForm.BackColor = [System.Drawing.Color]::FromArgb(30,30,30)  # Gris foncé
+        $mainForm.BackColor = [System.Drawing.Color]::FromArgb(30,30,30)
         $mainForm.ForeColor = [System.Drawing.Color]::White
         $mainForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedSingle
         $mainForm.MaximizeBox = $false
-        $mainForm.TopMost = $true  # Force la fenêtre en avant-plan
-        $mainForm.Focus()          # Donner le focus à la fenêtre
+        $mainForm.TopMost = $true
+        $mainForm.Focus()
         $mainForm.BringToFront()
-        $mainForm.Activate()       # Activer la fenêtre
+        $mainForm.Activate()
 
-        # Gestion de la fermeture de la fenêtre principale
+        # Gestion de la fermeture
         $mainForm.Add_FormClosing({
             param($sender, $e)
-            Write-Host "Closing application..." -ForegroundColor Yellow
+            Write-Host "Fermeture de l'application..." -ForegroundColor Yellow
             [System.Windows.Forms.Application]::Exit()
             [Environment]::Exit(0)
         })
         Write-Host "✓ Fenêtre principale créée" -ForegroundColor Green
 
-        # Rayon panel principal
+        # Section panneau principal
         $mainPanel = New-Object System.Windows.Forms.Panel
-        $mainPanel.Size = New-Object System.Drawing.Size(780,560)
+        $mainPanel.Size = New-Object System.Drawing.Size(680,550)  # Hauteur augmentée à 660
         $mainPanel.Location = New-Object System.Drawing.Point(10,10)
-        $mainPanel.BackColor = [System.Drawing.Color]::FromArgb(30,30,30)  # Gris foncé
+        $mainPanel.BackColor = [System.Drawing.Color]::FromArgb(30,30,30)
         $mainForm.Controls.Add($mainPanel)
-        Write-Host "✓ Panel principal créé" -ForegroundColor Green
-
-        # ===== Magasin des étiquettes =====
-        Write-Host "`n🏪 Création des étiquettes..." -ForegroundColor Cyan
-        
-        # Rayon titre
-        $titleLabel = New-Object System.Windows.Forms.Label
-        $titleLabel.Text = "Unlocker Free Trial"
-        $titleLabel.Font = New-Object System.Drawing.Font("Segoe UI Light", 32)
-        $titleLabel.ForeColor = [System.Drawing.Color]::White
-        $titleLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
-        $titleLabel.Size = New-Object System.Drawing.Size(780,50)
-        $titleLabel.Location = New-Object System.Drawing.Point(0,20)
-        $mainPanel.Controls.Add($titleLabel)
-
-        # Sous-titre
-        $subtitleLabel = New-Object System.Windows.Forms.Label
-        $subtitleLabel.Text = "pour Cursor"
-        $subtitleLabel.Font = New-Object System.Drawing.Font("Segoe UI Light", 16)
-        $subtitleLabel.ForeColor = [System.Drawing.Color]::FromArgb(150,150,150)  # Gris plus clair
-        $subtitleLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
-        $subtitleLabel.Size = New-Object System.Drawing.Size(780,30)
-        $subtitleLabel.Location = New-Object System.Drawing.Point(0,70)
-        $mainPanel.Controls.Add($subtitleLabel)
-        Write-Host "✓ Titres créés" -ForegroundColor Green
-
-        # Rayon informations MAC
-        $macInfoPanel = New-Object System.Windows.Forms.Panel
-        $macInfoPanel.Location = New-Object System.Drawing.Point(90,110)
-        $macInfoPanel.Size = New-Object System.Drawing.Size(600,80)
-        $macInfoPanel.BackColor = [System.Drawing.Color]::FromArgb(45,45,45)  # Gris légèrement plus clair
-        
-        # Ajout des coins arrondis pour le panel MAC
-        $macInfoPanel.Add_Paint({
-            param($sender, $e)
-            
-            $diameter = 10
-            $arc = New-Object System.Drawing.Drawing2D.GraphicsPath
-            
-            # Coins arrondis
-            $arc.AddArc(0, 0, $diameter, $diameter, 180, 90)
-            $arc.AddArc($sender.Width - $diameter, 0, $diameter, $diameter, 270, 90)
-            $arc.AddArc($sender.Width - $diameter, $sender.Height - $diameter, $diameter, $diameter, 0, 90)
-            $arc.AddArc(0, $sender.Height - $diameter, $diameter, $diameter, 90, 90)
-            
-            $arc.CloseFigure()
-            $sender.Region = New-Object System.Drawing.Region($arc)
-            
-            # Bordure grise
-            $pen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(60,60,60), 1)
-            $e.Graphics.DrawPath($pen, $arc)
-        })
-
-        $mainPanel.Controls.Add($macInfoPanel)
-
-        $macInfoLabel = New-Object System.Windows.Forms.Label
-        $macInfoLabel.Location = New-Object System.Drawing.Point(10,10)
-        $macInfoLabel.Size = New-Object System.Drawing.Size(580,60)
-        $macInfoLabel.Font = New-Object System.Drawing.Font("Segoe UI", 10)
-        $macInfoLabel.ForeColor = [System.Drawing.Color]::FromArgb(200,200,200)  # Plus lumineux
-        $macInfoLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
-        $macInfoPanel.Controls.Add($macInfoLabel)
-        Write-Host "✓ Panel MAC créé" -ForegroundColor Green
+        Write-Host "✓ Panneau principal créé" -ForegroundColor Green
 
         # ===== Magasin des styles =====
         Write-Host "`n🏪 Configuration des styles..." -ForegroundColor Cyan
         
-        # Rayon dimensions des boutons
+        # Section dimensions des boutons
         $buttonWidth = 600
         $buttonHeight = 35
-        $buttonX = ($mainPanel.Width - $buttonWidth) / 2
-        $buttonStartY = 230
-        $buttonSpacing = 60
+        $buttonX = [int](($mainPanel.Width - $buttonWidth) / 2)
+        $buttonStartY = 250  # Position après le panneau MAC
+        $buttonSpacing = 45  # Espacement entre les boutons
 
-        # Rayon fabrique de boutons
+        # Section fabrique de boutons
         function Create-StyledButton {
             param(
+                [Parameter(Mandatory=$true)]
                 [string]$text,
-                [int]$y,
-                [System.Drawing.Color]$customBackColor = [System.Drawing.Color]::FromArgb(50,50,50)  # Gris clair pour les boutons
+                [Parameter(Mandatory=$false)]
+                [int]$y = 0,
+                [Parameter(Mandatory=$false)]
+                [int]$width = 0,
+                [Parameter(Mandatory=$false)]
+                [int]$height = 0,
+                [Parameter(Mandatory=$false)]
+                [int]$x = 0,
+                [Parameter(Mandatory=$false)]
+                [System.Drawing.Color]$customBackColor = [System.Drawing.Color]::FromArgb(50,50,50),
+                [Parameter(Mandatory=$false)]
+                [string]$fontFamily = "consolas",
+                [Parameter(Mandatory=$false)]
+                [int]$fontSize = 11
             )
             
             try {
                 $button = New-Object System.Windows.Forms.Button
+                
+                # Gestion de la taille
+                if ($width -gt 0 -and $height -gt 0) {
+                    $button.Size = New-Object System.Drawing.Size($width, $height)
+                } else {
                 $button.Size = New-Object System.Drawing.Size($buttonWidth, $buttonHeight)
+                }
+
+                # Gestion de la position
+                if ($x -gt 0 -and $y -gt 0) {
+                    $button.Location = New-Object System.Drawing.Point($x, $y)
+                } elseif ($y -gt 0) {
                 $button.Location = New-Object System.Drawing.Point($buttonX, $y)
+                }
+
                 $button.Text = $text
-                $button.Font = New-Object System.Drawing.Font("Segoe UI Light", 11)
-                $button.ForeColor = [System.Drawing.Color]::White  # Texte blanc
+                $button.Font = New-Object System.Drawing.Font($fontFamily, $fontSize)
+                $button.ForeColor = [System.Drawing.Color]::White
                 $button.BackColor = $customBackColor
                 $button.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
                 $button.FlatAppearance.BorderSize = 1
-                $button.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(60,60,60)  # Bordure grise
+                $button.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(60,60,60)
                 $button.FlatAppearance.MouseOverBackColor = [System.Drawing.Color]::FromArgb(60,60,60)
                 $button.FlatAppearance.MouseDownBackColor = [System.Drawing.Color]::FromArgb(70,70,70)
                 $button.Cursor = [System.Windows.Forms.Cursors]::Hand
+                $button.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
 
                 # Effet de survol
                 $button.Add_MouseEnter({
                     if ($this.BackColor -eq [System.Drawing.Color]::FromArgb(50,50,50)) {
-                        $this.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255,140,0)  # Orange
+                        $this.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255,140,0)
                     }
                 })
                 
                 $button.Add_MouseLeave({
                     if ($this.BackColor -eq [System.Drawing.Color]::FromArgb(50,50,50)) {
-                        $this.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(60,60,60)  # Retour à gris
+                        $this.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(60,60,60)
                     }
                 })
 
                 return $button
             }
             catch {
-                Write-Host "  ❌ Error lors de la création du bouton: $_" -ForegroundColor Red
+                Write-Host "  ❌ Erreur lors de la création du bouton: $_" -ForegroundColor Red
                 throw
             }
         }
 
-        # ===== Magasin des boutons =====
-        Write-Host "`n🏪 Création des boutons..." -ForegroundColor Cyan
-        
-        # Rayon boutons standards
-        # Déterminer le texte du bouton en fonction de l'emplacement actuel
-        $currentPath = $PSScriptRoot
-        $isInEnglishFolder = $currentPath.EndsWith('\EN')
-        $languageButtonText = if ($isInEnglishFolder) { "Passer à la version française" } else { "Passer à la version anglaise" }
-        $btnLanguage = Create-StyledButton $languageButtonText $buttonStartY
-        $btnMacAddress = Create-StyledButton "1. Modifier l'adresse MAC d'un adaptateur réseau" ($buttonStartY + $buttonSpacing)
-        $btnDeleteStorage = Create-StyledButton "2. Supprimer le fichier storage.json" ($buttonStartY + $buttonSpacing * 2)
-        Write-Host "✓ Boutons standards créés" -ForegroundColor Green
+        # ===== Magasin des composants =====
+        Write-Host "`n🏪 Création des composants..." -ForegroundColor Cyan
 
-        # Rayon boutons spéciaux
-        $btnExecuteAll = Create-StyledButton "3. Exécuter toutes les actions" ($buttonStartY + $buttonSpacing * 3) ([System.Drawing.Color]::FromArgb(255,140,0))  # Orange
-        $btnExit = Create-StyledButton "4. Quitter" ($buttonStartY + $buttonSpacing * 4) ([System.Drawing.Color]::FromArgb(185,45,45))  # Rouge
-        Write-Host "✓ Boutons spéciaux créés" -ForegroundColor Green
+        # Bouton de langue
+        $btnLang = Create-StyledButton -text "FR/EN" -y 10 -width 80 -height 30 -fontFamily "consolas" -fontSize 10
+        $btnLang.Location = New-Object System.Drawing.Point([int](($mainPanel.Width - 80) / 2), 10)
+        $mainPanel.Controls.Add($btnLang)
+
+        # Titre principal
+        $titleLabel = New-Object System.Windows.Forms.Label
+        $titleLabel.Text = $global:Translations[$global:CurrentLanguage]["MainTitle"]
+        $titleLabel.Font = New-Object System.Drawing.Font("Verdana", 32)
+        $titleLabel.ForeColor = [System.Drawing.Color]::FromArgb(255,140,0)  # Orange
+        $titleLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+        $titleLabel.Size = New-Object System.Drawing.Size(680,50)
+        $titleLabel.Location = New-Object System.Drawing.Point(0,60)
+        $mainPanel.Controls.Add($titleLabel)
+
+        # Sous-titre
+        $subtitleLabel1 = New-Object System.Windows.Forms.Label
+        $subtitleLabel1.Text = "pour"
+        $subtitleLabel1.Font = New-Object System.Drawing.Font("Segoe UI Light", 16)
+        $subtitleLabel1.ForeColor = [System.Drawing.Color]::FromArgb(150,150,150)
+        $subtitleLabel1.TextAlign = [System.Drawing.ContentAlignment]::MiddleRight
+        $subtitleLabel1.Size = New-Object System.Drawing.Size(100,40)
+        $subtitleLabel1.Location = New-Object System.Drawing.Point(180,110)
+        $mainPanel.Controls.Add($subtitleLabel1)
+
+        $subtitleLabel2 = New-Object System.Windows.Forms.Label
+        $subtitleLabel2.Text = "Cursor"
+        $subtitleLabel2.Font = New-Object System.Drawing.Font("consolas", 26)
+        $subtitleLabel2.ForeColor = [System.Drawing.Color]::FromArgb(198, 198, 198)
+        $subtitleLabel2.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+        $subtitleLabel2.Size = New-Object System.Drawing.Size(220,40)
+        $subtitleLabel2.Location = New-Object System.Drawing.Point(240,105)
+        $mainPanel.Controls.Add($subtitleLabel2)
+
+        # Panneau MAC
+        $macInfoPanel = New-Object System.Windows.Forms.Panel
+        $macInfoPanel.Location = New-Object System.Drawing.Point(90,150)
+        $macInfoPanel.Size = New-Object System.Drawing.Size(500,80)
+        $macInfoPanel.BackColor = [System.Drawing.Color]::FromArgb(45,45,45)
+        $mainPanel.Controls.Add($macInfoPanel)
+
+        # Label MAC
+        $macInfoLabel = New-Object System.Windows.Forms.Label
+        $macInfoLabel.Location = New-Object System.Drawing.Point(10,10)
+        $macInfoLabel.Size = New-Object System.Drawing.Size(480,60)
+        $macInfoLabel.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+        $macInfoLabel.ForeColor = [System.Drawing.Color]::FromArgb(200,200,200)
+        $macInfoLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+        $macInfoPanel.Controls.Add($macInfoLabel)
+
+        # Boutons principaux
+        $btnMacAddress = Create-StyledButton -text $global:Translations[$global:CurrentLanguage]["BtnMacAddress"] -y $buttonStartY -fontFamily "consolas"
+        $btnDeleteStorage = Create-StyledButton -text $global:Translations[$global:CurrentLanguage]["BtnDeleteStorage"] -y ($buttonStartY + $buttonSpacing) -fontFamily "consolas"
+        $btnExecuteAll = Create-StyledButton -text $global:Translations[$global:CurrentLanguage]["BtnExecuteAll"] -y ($buttonStartY + $buttonSpacing * 2) -customBackColor ([System.Drawing.Color]::FromArgb(255,140,0)) -fontFamily "consolas"
+        $btnExit = Create-StyledButton -text $global:Translations[$global:CurrentLanguage]["BtnExit"] -y ($buttonStartY + $buttonSpacing * 3) -customBackColor ([System.Drawing.Color]::FromArgb(185,45,45)) -fontFamily "consolas"
+
+        # Barre de progression
+        $progressBar = New-Object System.Windows.Forms.ProgressBar
+        $progressBar.Location = New-Object System.Drawing.Point($buttonX, ($buttonStartY + $buttonSpacing * 4))
+        $progressBar.Size = New-Object System.Drawing.Size($buttonWidth, 10)  # Plus fine
+        $progressBar.Style = 'Continuous'
+        $progressBar.Value = 0
+        $progressBar.BackColor = [System.Drawing.Color]::FromArgb(20,20,20)  # Fond sombre
+        $progressBar.ForeColor = [System.Drawing.Color]::FromArgb(255,140,0)  # Orange
+        $progressBar.MarqueeAnimationSpeed = 30
+        $progressBar.Visible = $true
+        $mainPanel.Controls.Add($progressBar)
+
+        # Label de statut
+        $statusLabel = New-Object System.Windows.Forms.Label
+        $statusLabel.Location = New-Object System.Drawing.Point($buttonX, ($buttonStartY + $buttonSpacing * 4 + 20))
+        $statusLabel.Size = New-Object System.Drawing.Size($buttonWidth, 40)
+        $statusLabel.Font = New-Object System.Drawing.Font("Segoe UI", 11)  # Plus grand
+        $statusLabel.ForeColor = [System.Drawing.Color]::FromArgb(255,140,0)  # Orange
+        $statusLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+        $statusLabel.Text = $global:Translations[$global:CurrentLanguage]["Ready"]
+        $mainPanel.Controls.Add($statusLabel)
+
+        # Ajout des boutons au panneau
+        $mainPanel.Controls.AddRange(@($btnMacAddress, $btnDeleteStorage, $btnExecuteAll, $btnExit))
 
         # ===== Magasin des événements =====
         Write-Host "`n🏪 Configuration des événements..." -ForegroundColor Cyan
         
-        # Rayon événements de sortie
+        # Section événements de sortie
         $btnExit.Add_Click({
             try {
-                Write-Host "Closing application..." -ForegroundColor Yellow
+                Write-Host "Fermeture de l'application..." -ForegroundColor Yellow
                 $form = $this.FindForm()
                 if ($form) {
                     [System.Windows.Forms.Application]::Exit()
@@ -190,42 +260,79 @@ function Initialize-MainWindow {
                 }
             }
             catch {
-                Write-Host "❌ Error lors de la fermeture: $_" -ForegroundColor Red
+                Write-Host "❌ Erreur lors de la fermeture: $_" -ForegroundColor Red
                 [Environment]::Exit(1)
             }
         })
-        Write-Host "✓ Événement de sortie configuré" -ForegroundColor Green
 
-        # Rayon événements MAC
+        # Section événements MAC
         $btnMacAddress.Add_Click({
             try {
-                Write-Host "🔄 Loading MAC interface..." -ForegroundColor Gray
-                # Charger le script dans la portée actuelle
-                . "$PSScriptRoot\Step4_MacAddressGUI.ps1"
-                # Appeler la fonction
-                Show-MacAddressWindow
-                Write-Host "✓ MAC interface closed" -ForegroundColor Green
+                Write-Host "🔄 Chargement de l'interface MAC..." -ForegroundColor Gray
+                
+                # Récupérer le label de statut depuis le formulaire
+                $form = $this.FindForm()
+                $statusLabel = $form.Controls[0].Controls | Where-Object { $_ -is [System.Windows.Forms.Label] -and $_.Font.Size -eq 9 }
+                
+                if ($statusLabel) {
+                    $statusLabel.Text = $global:Translations[$global:CurrentLanguage]["BtnMacAddress"]
+                    
+                    # Charger et exécuter le script MAC
+                    . "$PSScriptRoot\Step4_MacAddress.ps1"
+                    $adapter = Get-NetworkAdapters | Select-Object -First 1
+                    if ($adapter) {
+                        $newMac = New-MacAddress
+                        if ($newMac) {
+                            $result = Set-MacAddress -AdapterName $adapter.Name -MacAddress $newMac
+                            if ($result) {
+                                [System.Windows.Forms.MessageBox]::Show(
+                                    "L'adresse MAC a été modifiée avec succès.",
+                                    "Succès",
+                                    [System.Windows.Forms.MessageBoxButtons]::OK,
+                                    [System.Windows.Forms.MessageBoxIcon]::Information
+                                )
+                            }
+                        }
+                    }
+                    
+                    Start-Sleep -Seconds 1
+                    $statusLabel.Text = $global:Translations[$global:CurrentLanguage]["Ready"]
+                }
             }
             catch {
-                Write-Host "❌ Error lors du chargement de l'interface MAC: $_" -ForegroundColor Red
+                Write-Host "❌ Erreur lors de la modification MAC: $_" -ForegroundColor Red
                 [System.Windows.Forms.MessageBox]::Show(
-                    "Error lors du chargement de l'interface MAC: $_",
-                    "Error",
+                    "Une erreur est survenue: $_",
+                    "Erreur",
                     [System.Windows.Forms.MessageBoxButtons]::OK,
                     [System.Windows.Forms.MessageBoxIcon]::Error
                 )
             }
         })
-        Write-Host "✓ Événement MAC configuré" -ForegroundColor Green
 
-        # Rayon événements de suppression
+        # Section événements Storage
         $btnDeleteStorage.Add_Click({
             try {
-                Write-Host "🔄 Deleting storage.json file..." -ForegroundColor Gray
-                # Charger le script dans la portée actuelle
-                . "$PSScriptRoot\Step5_FileManager.ps1"
+                Write-Host "🔄 Suppression du fichier storage.json..." -ForegroundColor Gray
                 
-                # Appeler la fonction de suppression
+                # Récupérer les contrôles depuis le formulaire
+                $form = $this.FindForm()
+                $statusLabel = $form.Controls[0].Controls | Where-Object { $_ -is [System.Windows.Forms.Label] -and $_.Font.Size -eq 9 }
+                
+                if ($statusLabel) {
+                    $statusLabel.Text = $global:Translations[$global:CurrentLanguage]["BtnDeleteStorage"]
+                    
+                    # Déterminer le chemin du script
+                    $scriptPath = Join-Path $PSScriptRoot "Step5_FileManager.ps1"
+                    Write-Host "PSScriptRoot: $PSScriptRoot" -ForegroundColor Gray
+                    Write-Host "Chemin complet du script: $scriptPath" -ForegroundColor Gray
+                    
+                    # Vérifier si le fichier existe
+                    if (Test-Path $scriptPath) {
+                        Write-Host "Le fichier existe, tentative de chargement..." -ForegroundColor Gray
+                        . $scriptPath
+                        Write-Host "Script chargé avec succès" -ForegroundColor Green
+                        
                 $result = Remove-CursorStorage
                 
                 if ($result.Success) {
@@ -242,271 +349,301 @@ function Initialize-MainWindow {
                         [System.Windows.Forms.MessageBoxButtons]::OK,
                         [System.Windows.Forms.MessageBoxIcon]::Information
                     )
+                        }
+                    } else {
+                        Write-Host "❌ Le fichier n'existe pas à l'emplacement: $scriptPath" -ForegroundColor Red
+                        throw "Le fichier Step5_FileManager.ps1 n'existe pas à l'emplacement: $scriptPath"
+                    }
+                    
+                    Start-Sleep -Seconds 1
+                    $statusLabel.Text = $global:Translations[$global:CurrentLanguage]["Ready"]
                 }
             }
             catch {
-                Write-Host "❌ Error lors de la suppression du fichier: $_" -ForegroundColor Red
+                Write-Host "❌ Erreur lors de la suppression du storage: $_" -ForegroundColor Red
                 [System.Windows.Forms.MessageBox]::Show(
-                    "Error lors de la suppression du fichier: $_",
-                    "Error",
-                    [System.Windows.Forms.MessageBoxButtons]::OK,
-                    [System.Windows.Forms.MessageBoxIcon]::Error
-                )
-            }
-        })
-        Write-Host "✓ Événement de suppression configuré" -ForegroundColor Green
-
-        # Rayon événements d'exécution globale
-        $btnExecuteAll.Add_Click({
-            try {
-                # Charger et exécuter le script
-                . "$PSScriptRoot\Step6_ExecuteAll.ps1"
-                $results = Start-AllActions
-                
-                # Afficher le résultat
-                $message = @"
-Résumé des actions :
-
-Modification MAC : $(if($results.MAC){'✓ Réussi'}else{'❌ Échec'})
-Suppression storage.json : $(if($results.Storage){'✓ Réussi'}else{'❌ Échec'})
-
-Veuillez procéder à votre nouvelle inscription
-sur cursor.com
-"@
-                
-                if ((Show-CustomDialog -Message $message -Title "Résultat des actions") -eq [System.Windows.Forms.DialogResult]::OK) {
-                    # Ouvrir le navigateur après que l'utilisateur ait cliqué on cursor.com
-                    Write-Host "`n=== Ouverture du site Cursor ===" -ForegroundColor Yellow
-                    try {
-                        Start-Process "https://www.cursor.com/"
-                        Write-Host "  ✓ Site web ouvert avec succès" -ForegroundColor Green
-                    }
-                    catch {
-                        Write-Host "  ❌ Error lors de l'ouverture du site: $_" -ForegroundColor Red
-                        [System.Windows.Forms.MessageBox]::Show(
-                            "Erreur lors de l'ouverture du site: $_",
-                            "Erreur",
-                            [System.Windows.Forms.MessageBoxButtons]::OK,
-                            [System.Windows.Forms.MessageBoxIcon]::Error
-                        )
-                    }
-                }
-                
-                # Mettre à jour les informations MAC
-                if ($macInfoLabel -and $macInfoLabel.IsHandleCreated) {
-                    Write-Host "`n=== Mise à jour des informations MAC ===" -ForegroundColor Yellow
-                    Start-Sleep -Seconds 2  # Attendre que la carte réseau soit bien réinitialisée
-                    Update-MacInfoLabel -Label $macInfoLabel
-                }
-            }
-            catch {
-                [System.Windows.Forms.MessageBox]::Show(
-                    "Erreur lors de l'exécution des actions: $_",
+                    "Une erreur est survenue: $_",
                     "Erreur",
                     [System.Windows.Forms.MessageBoxButtons]::OK,
                     [System.Windows.Forms.MessageBoxIcon]::Error
                 )
             }
         })
-        Write-Host "✓ Événement d'exécution globale configuré" -ForegroundColor Green
 
-        # Rayon événements de langue
-        $btnLanguage.Add_Click({
+        # Section événements Execute All
+        $btnExecuteAll.Add_Click({
             try {
-                $currentPath = $PSScriptRoot
-                $isInEnglishFolder = $currentPath.EndsWith('\EN')
+                # Récupérer les contrôles depuis le formulaire
+                $form = $this.FindForm()
+                $statusLabel = $form.Controls[0].Controls | Where-Object { $_ -is [System.Windows.Forms.Label] -and $_.Font.Size -eq 9 }
+                $progressBar = $form.Controls[0].Controls | Where-Object { $_ -is [System.Windows.Forms.ProgressBar] }
                 
-                # Déterminer le chemin du script à démarrer
-                if ($isInEnglishFolder) {
-                    # Si on est dans EN, on démarre la version FR à la racine
-                    $startPath = Join-Path (Split-Path $currentPath -Parent) "start.ps1"
-                } else {
-                    # Si on est à la racine, on démarre la version EN
-                    $startPath = Join-Path $currentPath "EN\start.ps1"
-                }
+                if ($statusLabel -and $progressBar) {
+                    $this.Enabled = $false
+                    $progressBar.Value = 0
+                    $statusLabel.Text = "Initialisation..."
+                    Start-Sleep -Milliseconds 500
+                    
+                    # Mise à jour de la progression pour la modification MAC
+                    $progressBar.Value = 10
+                    $statusLabel.Text = "Chargement du script MAC..."
+                    Start-Sleep -Milliseconds 500
+                    
+                    # Charger et exécuter le script MAC
+                    . "$PSScriptRoot\Step4_MacAddress.ps1"
+                    $progressBar.Value = 20
+                    $statusLabel.Text = "Récupération de l'adaptateur réseau..."
+                    Start-Sleep -Milliseconds 500
+                    
+                    $adapter = Get-NetworkAdapters | Select-Object -First 1
+                    $macResult = $false
+                    if ($adapter) {
+                        $progressBar.Value = 30
+                        $statusLabel.Text = "Génération de la nouvelle adresse MAC..."
+                        Start-Sleep -Milliseconds 500
+                        
+                        $newMac = New-MacAddress
+                        if ($newMac) {
+                            $progressBar.Value = 40
+                            $statusLabel.Text = "Application de la nouvelle adresse MAC..."
+                            Start-Sleep -Milliseconds 500
+                            
+                            $macResult = Set-MacAddress -AdapterName $adapter.Name -MacAddress $newMac
+                            if ($macResult) {
+                                $progressBar.Value = 50
+                                $statusLabel.Text = "Adresse MAC modifiée avec succès"
+                                Start-Sleep -Milliseconds 500
+                            }
+                        }
+                    }
+                    
+                    # Mise à jour de la progression pour la suppression du storage
+                    $progressBar.Value = 60
+                    $statusLabel.Text = "Chargement du script de gestion des fichiers..."
+                    Start-Sleep -Milliseconds 500
+                    
+                    # Charger et exécuter le script de suppression du storage
+                    $scriptPath = Join-Path $PSScriptRoot "Step5_FileManager.ps1"
+                    $storageResult = $false
+                    $storageMessage = "Le fichier storage.json n'existe pas"
+                    
+                    if (Test-Path $scriptPath) {
+                        $progressBar.Value = 70
+                        $statusLabel.Text = "Vérification du fichier storage.json..."
+                        Start-Sleep -Milliseconds 500
+                        
+                        . $scriptPath
+                        $progressBar.Value = 80
+                        $statusLabel.Text = "Suppression du fichier storage.json..."
+                        Start-Sleep -Milliseconds 500
+                        
+                        $result = Remove-CursorStorage
+                        $storageResult = $result.Success
+                        $storageMessage = $result.Message
+                        
+                        if ($storageResult) {
+                            $progressBar.Value = 90
+                            $statusLabel.Text = "Fichier storage.json supprimé avec succès"
+                            Start-Sleep -Milliseconds 500
+                        }
+                    }
+                    
+                    # Mise à jour finale de la progression
+                    $progressBar.Value = 100
+                    $statusLabel.Text = "Actions terminées"
+                    Start-Sleep -Milliseconds 500
+                    
+                    # Créer la fenêtre de résumé avec les boutons
+                    $summaryForm = New-Object System.Windows.Forms.Form
+                    $summaryForm.Text = "Résumé"
+                    $summaryForm.Size = New-Object System.Drawing.Size(400, 300)
+                    $summaryForm.StartPosition = "CenterScreen"
+                    $summaryForm.BackColor = [System.Drawing.Color]::FromArgb(30,30,30)
+                    $summaryForm.ForeColor = [System.Drawing.Color]::White
+                    $summaryForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedSingle
+                    $summaryForm.MaximizeBox = $false
+                    $summaryForm.TopMost = $true
+                    
+                    # Label de résumé
+                    $summaryLabel = New-Object System.Windows.Forms.Label
+                    $summaryLabel.Text = @"
+Résumé des actions :
 
-                # Vérifier que le script existe
-                if (-not (Test-Path $startPath)) {
-                    throw "La version demandée n'existe pas. Veuillez vérifier que le dossier EN et ses fichiers sont présents."
-                }
+Modification MAC: $(if($macResult){'✓ Succès'}else{'❌ Échec'})
+Suppression storage.json: $(if($storageResult){'✓ Succès'}else{'❌ Échec - ' + $storageMessage})
 
-                Write-Host "Démarrage de la version dans $startPath..." -ForegroundColor Yellow
-                
-                # Démarrer la nouvelle instance en mode caché
-                $startInfo = New-Object System.Diagnostics.ProcessStartInfo
-                $startInfo.FileName = "pwsh.exe"
-                $startInfo.Arguments = "-WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"$startPath`""
-                $startInfo.Verb = "RunAs"
-                $startInfo.UseShellExecute = $true
-                $startInfo.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
-                
-                [System.Windows.Forms.Application]::EnableVisualStyles()
-                [System.Windows.Forms.Application]::DoEvents()
-                
-                $process = [System.Diagnostics.Process]::Start($startInfo)
-                Start-Sleep -Seconds 1
-                
-                # Fermer l'instance actuelle
-                $currentForm = $this.FindForm()
-                if ($currentForm) {
-                    $currentForm.Close()
-                    [System.Windows.Forms.Application]::Exit()
-                    [Environment]::Exit(0)
+Veuillez procéder à votre nouvelle inscription
+sur cursor.com
+"@
+                    $summaryLabel.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+                    $summaryLabel.ForeColor = [System.Drawing.Color]::White
+                    $summaryLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+                    $summaryLabel.Size = New-Object System.Drawing.Size(380, 120)
+                    $summaryLabel.Location = New-Object System.Drawing.Point(10, 20)
+                    $summaryForm.Controls.Add($summaryLabel)
+                    
+                    # Bouton Cursor
+                    $btnCursor = New-Object System.Windows.Forms.Button
+                    $btnCursor.Text = "Aller sur cursor.com"
+                    $btnCursor.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+                    $btnCursor.Size = New-Object System.Drawing.Size(200, 35)
+                    $btnCursor.Location = New-Object System.Drawing.Point(100, 150)
+                    $btnCursor.BackColor = [System.Drawing.Color]::FromArgb(255,140,0)
+                    $btnCursor.ForeColor = [System.Drawing.Color]::White
+                    $btnCursor.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+                    $btnCursor.FlatAppearance.BorderSize = 1
+                    $btnCursor.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255,140,0)
+                    $btnCursor.Cursor = [System.Windows.Forms.Cursors]::Hand
+                    $btnCursor.Add_Click({
+                        Start-Process "https://cursor.com"
+                    })
+                    $summaryForm.Controls.Add($btnCursor)
+                    
+                    # Bouton Extension
+                    $btnExtension = New-Object System.Windows.Forms.Button
+                    $btnExtension.Text = "Emails Temporaires"
+                    $btnExtension.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+                    $btnExtension.Size = New-Object System.Drawing.Size(200, 35)
+                    $btnExtension.Location = New-Object System.Drawing.Point(100, 200)
+                    $btnExtension.BackColor = [System.Drawing.Color]::FromArgb(255,140,0)
+                    $btnExtension.ForeColor = [System.Drawing.Color]::White
+                    $btnExtension.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+                    $btnExtension.FlatAppearance.BorderSize = 1
+                    $btnExtension.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255,140,0)
+                    $btnExtension.Cursor = [System.Windows.Forms.Cursors]::Hand
+                    $btnExtension.Add_Click({
+                        Start-Process "https://chromewebstore.google.com/detail/temporary-email-emailonde/mkpcaklladfpajiaikehdinfaabmnajh"
+                    })
+                    $summaryForm.Controls.Add($btnExtension)
+                    
+                    # Afficher la fenêtre de résumé
+                    $summaryForm.ShowDialog()
                 }
             }
             catch {
-                Write-Host "❌ Error lors du changement de langue: $_" -ForegroundColor Red
+                Write-Host "❌ Erreur lors de l'exécution: $_" -ForegroundColor Red
                 [System.Windows.Forms.MessageBox]::Show(
-                    "Error lors du changement de langue: $_",
+                    "Une erreur inattendue est survenue: $_",
+                    "Erreur",
+                    [System.Windows.Forms.MessageBoxButtons]::OK,
+                    [System.Windows.Forms.MessageBoxIcon]::Error
+                )
+            }
+            finally {
+                if ($statusLabel -and $progressBar) {
+                    $this.Enabled = $true
+                    $progressBar.Value = 0
+                    $statusLabel.Text = $global:Translations[$global:CurrentLanguage]["Ready"]
+                }
+            }
+        })
+
+        # Événement du bouton de langue
+        $btnLang.Add_Click({
+            try {
+                # Changer la langue
+                $global:CurrentLanguage = if ($global:CurrentLanguage -eq "FR") { "EN" } else { "FR" }
+                
+                # Update interface texts
+                $mainForm = $this.FindForm()
+                if ($mainForm) {
+                    $mainForm.Text = $global:Translations[$global:CurrentLanguage]["WindowTitle"]
+                    foreach ($control in $mainForm.Controls) {
+                        if ($control -is [System.Windows.Forms.Panel]) {
+                            foreach ($panelControl in $control.Controls) {
+                                if ($panelControl -is [System.Windows.Forms.Panel]) {
+                                    # Mise à jour des contrôles dans le panneau MAC
+                                    foreach ($macControl in $panelControl.Controls) {
+                                        if ($macControl -is [System.Windows.Forms.Label]) {
+                                            if ($macControl.Font.Size -eq 10) {
+                                                if ($macControl.ForeColor -eq [System.Drawing.Color]::FromArgb(255,140,0)) {
+                                                    # C'est le label de l'adresse MAC
+                                                    $adapter = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' } | Select-Object -First 1
+                                                    if ($adapter) {
+                                                        $macControl.Text = $adapter.MacAddress
+                                                    }
+                                                } else {
+                                                    # C'est le label principal
+                                                    $adapter = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' } | Select-Object -First 1
+                                                    if ($adapter) {
+                                                        $macControl.Text = "$($global:Translations[$global:CurrentLanguage]["NetworkCard"]) : $($adapter.Name)`n$($global:Translations[$global:CurrentLanguage]["MacAddress"]) : "
+                                                        $macControl.TextAlign = [System.Drawing.ContentAlignment]::MiddleRight
+                } else {
+                                                        $macControl.Text = $global:Translations[$global:CurrentLanguage]["NoNetwork"]
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch {
+                Write-Host "❌ Error during language change: $_" -ForegroundColor Red
+                [System.Windows.Forms.MessageBox]::Show(
+                    "Error during language change: $_",
                     "Error",
                     [System.Windows.Forms.MessageBoxButtons]::OK,
                     [System.Windows.Forms.MessageBoxIcon]::Error
                 )
             }
         })
-        Write-Host "✓ Événement de langue configuré" -ForegroundColor Green
 
-        # ===== Assemblage final =====
-        Write-Host "`n🔧 Assemblage des composants..." -ForegroundColor Cyan
-        
-        # Rayon ajout des boutons
-        $mainPanel.Controls.AddRange(@(
-            $btnLanguage,
-            $btnMacAddress,
-            $btnDeleteStorage,
-            $btnExecuteAll,
-            $btnExit
-        ))
-        Write-Host "✓ Boutons assemblés" -ForegroundColor Green
-
-        # Mise à jour des informations MAC
+        # Initialisation des informations réseau
         try {
-            Update-MacInfoLabel -Label $macInfoLabel
-            Write-Host "✓ Informations MAC mises à jour" -ForegroundColor Green
-        }
-        catch {
-            $macInfoLabel.Text = "Unable to retrieve network information"
-            Write-Host "⚠️ Error lors de la mise à jour MAC" -ForegroundColor Yellow
+            $adapter = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' } | Select-Object -First 1
+            if ($adapter) {
+                # Label principal pour le texte descriptif
+                $macInfoLabel.Text = "$($global:Translations[$global:CurrentLanguage]["NetworkCard"]) : $($adapter.Name)`n$($global:Translations[$global:CurrentLanguage]["MacAddress"]) : "
+                $macInfoLabel.ForeColor = [System.Drawing.Color]::FromArgb(200,200,200)
+                $macInfoLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleRight
+                $macInfoLabel.Size = New-Object System.Drawing.Size(200,60)
+                $macInfoLabel.Location = New-Object System.Drawing.Point(10,10)
+                
+                # Label pour l'adresse MAC en orange
+                $macAddressLabel = New-Object System.Windows.Forms.Label
+                $macAddressLabel.Text = $adapter.MacAddress
+                $macAddressLabel.Font = New-Object System.Drawing.Font("Segoe UI", 20)  # Taille augmentée à 16
+                $macAddressLabel.ForeColor = [System.Drawing.Color]::FromArgb(255,140,0)  # Orange
+                $macAddressLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
+                $macAddressLabel.Size = New-Object System.Drawing.Size(350,30)  # Hauteur augmentée à 30
+                $macAddressLabel.Location = New-Object System.Drawing.Point(220,30)  # Position ajustée
+                $macInfoPanel.Controls.Add($macAddressLabel)
+            } else {
+                $macInfoLabel.Text = $global:Translations[$global:CurrentLanguage]["NoNetwork"]
+            }
+        } catch {
+            $macInfoLabel.Text = $global:Translations[$global:CurrentLanguage]["NetworkError"]
         }
 
-        # ===== Caisse finale =====
-        Write-Host "`n Finalisation de l'interface..." -ForegroundColor Cyan
+        Write-Host "✓ Événements configurés" -ForegroundColor Green
+
+        # Retourner l'interface avec tous les contrôles
         return @{
             Form = $mainForm
-            LanguageButton = $btnLanguage
+            LanguageButton = $btnLang
             MacAddressButton = $btnMacAddress
             DeleteStorageButton = $btnDeleteStorage
             ExecuteAllButton = $btnExecuteAll
             ExitButton = $btnExit
+            ProgressBar = $progressBar
+            StatusLabel = $statusLabel
+            MacInfoLabel = $macInfoLabel
         }
     }
     catch {
-        Write-Host "`n❌ Error lors de la création de l'interface: $_" -ForegroundColor Red
-        return $null
-    }
-}
-
-function Show-MainInterface {
-    try {
-        # Configuration de la culture
-        [System.Windows.Forms.Application]::CurrentCulture = [System.Globalization.CultureInfo]::GetCultureInfo('fr-FR')
-        [System.Threading.Thread]::CurrentThread.CurrentUICulture = [System.Globalization.CultureInfo]::GetCultureInfo('fr-FR')
-        
-        # Lancement de l'interface
-        $interface = Initialize-MainWindow
-        if ($interface -and $interface.Form) {
-            # Configuration de la fenêtre
-            $interface.Form.Add_Load({
-                $this.Activate()
-                $this.BringToFront()
-                $this.Focus()
-            })
-            
-            # Démarrage de la boucle de messages Windows Forms
-            [System.Windows.Forms.Application]::Run($interface.Form)
-            return $true
-        } else {
-            throw "Échec de l'initialisation de l'interface"
-        }
-    }
-    catch {
-        Write-Host "❌ Error lors du lancement de l'interface: $_" -ForegroundColor Red
+        Write-Host "❌ Erreur lors de l'initialisation de l'interface: $_" -ForegroundColor Red
         throw
     }
 }
 
-# Fonction pour afficher une boîte de dialogue personnalisée
-function Show-CustomDialog {
-    param (
-        [string]$Message,
-        [string]$Title
-    )
-    
-    $form = New-Object System.Windows.Forms.Form
-    $form.Text = $Title
-    $form.Size = New-Object System.Drawing.Size(400,250)
-    $form.StartPosition = "CenterScreen"
-    $form.BackColor = [System.Drawing.Color]::FromArgb(30,30,30)
-    $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
-    $form.MaximizeBox = $false
-    $form.MinimizeBox = $false
-    $form.TopMost = $true  # Forcer la fenêtre au premier plan
-    $form.Focus()          # Donner le focus à la fenêtre
-    $form.BringToFront()   # Forcer la fenêtre au premier plan
-    $form.Activate()       # Activer la fenêtre
-
-    $label = New-Object System.Windows.Forms.Label
-    $label.Location = New-Object System.Drawing.Point(20,20)
-    $label.Size = New-Object System.Drawing.Size(360,100)
-    $label.Text = $Message
-    $label.ForeColor = [System.Drawing.Color]::White
-    $label.Font = New-Object System.Drawing.Font("Segoe UI", 10)
-    $label.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
-    $form.Controls.Add($label)
-
-    $btnExtension = New-Object System.Windows.Forms.Button
-    $btnExtension.Location = New-Object System.Drawing.Point(20,130)
-    $btnExtension.Size = New-Object System.Drawing.Size(360,30)
-    $btnExtension.Text = "Installer l'extension Email Temporaire"
-    $btnExtension.BackColor = [System.Drawing.Color]::FromArgb(50,50,50)
-    $btnExtension.ForeColor = [System.Drawing.Color]::White
-    $btnExtension.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-    $btnExtension.Add_Click({
-        Start-Process "https://chromewebstore.google.com/detail/temporary-email-emailonde/mkpcaklladfpajiaikehdinfaabmnajh"
-    })
-    $form.Controls.Add($btnExtension)
-
-    $btnOK = New-Object System.Windows.Forms.Button
-    $btnOK.Location = New-Object System.Drawing.Point(200,170)
-    $btnOK.Size = New-Object System.Drawing.Size(80,30)
-    $btnOK.Text = "cursor.com"
-    $btnOK.DialogResult = [System.Windows.Forms.DialogResult]::OK
-    $btnOK.BackColor = [System.Drawing.Color]::FromArgb(255,140,0)
-    $btnOK.ForeColor = [System.Drawing.Color]::White
-    $btnOK.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-    $form.Controls.Add($btnOK)
-
-    $btnCancel = New-Object System.Windows.Forms.Button
-    $btnCancel.Location = New-Object System.Drawing.Point(300,170)
-    $btnCancel.Size = New-Object System.Drawing.Size(80,30)
-    $btnCancel.Text = "Annuler"
-    $btnCancel.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
-    $btnCancel.BackColor = [System.Drawing.Color]::FromArgb(50,50,50)
-    $btnCancel.ForeColor = [System.Drawing.Color]::White
-    $btnCancel.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-    $form.Controls.Add($btnCancel)
-
-    $form.AcceptButton = $btnOK
-    $form.CancelButton = $btnCancel
-
-    # Ajouter un gestionnaire d'événements pour le chargement de la fenêtre
-    $form.Add_Load({
-        $this.Activate()
-        $this.BringToFront()
-        $this.Focus()
-    })
-
-    return $form.ShowDialog()
+# Si le script est exécuté directement, créer et afficher l'interface
+if ($MyInvocation.InvocationName -ne '.') {
+    $interface = Initialize-MainWindow
+    $interface.Form.ShowDialog()
 } 
 
 

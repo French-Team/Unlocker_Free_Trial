@@ -1,15 +1,15 @@
 # =================================================================
 # File       : Step6_ExecuteAll.ps1
-# Role       : Main shopping mall for executing all actions
-# Shops      : - Functions shop (copy of necessary functions)
-#              - Executions shop (action sequence)
+# Role       : Main commercial center for executing all actions
+# Stores     : - Function store (copy of necessary functions)
+#              - Execution store (action sequence)
 # =================================================================
 
-# ===== Imported functions shop =====
+# ===== Imported functions store =====
 
-# ----- MAC functions -----
+# ----- MAC Functions -----
 function Get-NetworkAdapters {
-    Write-Host "🏪 Accessing adapters shop..." -ForegroundColor Cyan
+    Write-Host "🏪 Accessing adapters store..." -ForegroundColor Cyan
     
     try {
         Write-Host "  🔍 Searching for active adapters..." -ForegroundColor Gray
@@ -27,22 +27,22 @@ function Get-NetworkAdapters {
             Write-Host "  ✓ Adapters found: $($adapters.Count)" -ForegroundColor Green
             return $adapters
         } else {
-            Write-Host "  ⚠️ No adapter found" -ForegroundColor Yellow
+            Write-Host "  ⚠️ No adapters found" -ForegroundColor Yellow
             return $null
         }
     }
     catch {
         Write-Host "  ❌ Error during search: $_" -ForegroundColor Red
-        Write-Error "Error retrieving adapters: $_"
+        Write-Error "Error while retrieving adapters: $_"
         return $null
     }
 }
 
 function New-MacAddress {
-    Write-Host "🏪 Accessing MAC addresses shop..." -ForegroundColor Cyan
+    Write-Host "🏪 Accessing MAC addresses store..." -ForegroundColor Cyan
     
     try {
-        Write-Host "  🎲 Generating new address..." -ForegroundColor Gray
+        Write-Host "  🎲 Generating a new address..." -ForegroundColor Gray
         $firstByte = '{0:X2}' -f ((Get-Random -Minimum 0 -Maximum 255) -band 0xFE)
         $otherBytes = 2..6 | ForEach-Object {
             '{0:X2}' -f (Get-Random -Minimum 0 -Maximum 255)
@@ -61,7 +61,7 @@ function New-MacAddress {
 function Test-MacAddress {
     param ([string]$MacAddress)
     
-    Write-Host "🏪 Accessing validation shop..." -ForegroundColor Cyan
+    Write-Host "🏪 Accessing validation store..." -ForegroundColor Cyan
     
     try {
         Write-Host "  🔍 Checking format..." -ForegroundColor Gray
@@ -87,7 +87,7 @@ function Set-MacAddress {
         [string]$MacAddress
     )
     
-    Write-Host "🏪 Accessing modifications shop..." -ForegroundColor Cyan
+    Write-Host "🏪 Accessing modifications store..." -ForegroundColor Cyan
     
     try {
         Write-Host "  🔍 Searching for adapter..." -ForegroundColor Gray
@@ -140,10 +140,10 @@ if (-not `$success) {
 
         Write-Host "  ✓ Registry modified" -ForegroundColor Green
 
-        Write-Host "  🔌 Enabling adapter..." -ForegroundColor Gray
+        Write-Host "  🔌 Reactivating adapter..." -ForegroundColor Gray
         Start-Sleep -Seconds 2
         Enable-NetAdapter -Name $AdapterName -Confirm:$false
-        Write-Host "  ✓ Adapter enabled" -ForegroundColor Green
+        Write-Host "  ✓ Adapter reactivated" -ForegroundColor Green
 
         return $true
     }
@@ -152,15 +152,15 @@ if (-not `$success) {
         Write-Error "Error modifying MAC address: $_"
         try { 
             Enable-NetAdapter -Name $AdapterName -Confirm:$false 
-            Write-Host "  ⚠️ Adapter re-enabled after error" -ForegroundColor Yellow
+            Write-Host "  ⚠️ Adapter reactivated after error" -ForegroundColor Yellow
         } catch { }
         return $false
     }
 }
 
-# ----- Storage functions -----
+# ----- Storage Functions -----
 function Get-CursorStoragePath {
-    Write-Host "🏪 Accessing paths shop..." -ForegroundColor Cyan
+    Write-Host "🏪 Accessing paths store..." -ForegroundColor Cyan
     
     try {
         Write-Host "  🔍 Building path..." -ForegroundColor Gray
@@ -171,44 +171,71 @@ function Get-CursorStoragePath {
         return $storagePath
     }
     catch {
-        Write-Host "  ❌ Error building path: $_" -ForegroundColor Red
-        throw "Error building path: $_"
+        Write-Host "  ❌ Error while building path: $_" -ForegroundColor Red
+        throw "Error while building path: $_"
     }
 }
 
-function Remove-CursorStorage {
-    Write-Host "🏪 Accessing deletions shop..." -ForegroundColor Cyan
-    
+function Test-CursorStorageExists {
     try {
-        $filePath = Get-CursorStoragePath
-        Write-Host "  🔍 Searching for file: $filePath" -ForegroundColor Gray
-        
-        if (Test-Path $filePath) {
-            Write-Host "  🗑️ Deleting file..." -ForegroundColor Yellow
-            Remove-Item -Path $filePath -Force
-            Write-Host "  ✓ File successfully deleted" -ForegroundColor Green
+        $storagePath = Get-CursorStoragePath
+        if (Test-Path $storagePath) {
             return @{
                 Success = $true
-                Message = "File successfully deleted"
+                Message = "Le fichier storage.json existe"
+                Path = $storagePath
             }
         } else {
-            Write-Host "  ⚠️ File not found" -ForegroundColor Yellow
             return @{
                 Success = $false
-                Message = "File does not exist"
+                Message = "Le fichier storage.json n'existe pas"
+                Path = $storagePath
             }
         }
     }
     catch {
-        Write-Host "  ❌ Error during deletion: $_" -ForegroundColor Red
         return @{
             Success = $false
-            Message = "Error during deletion: $_"
+            Message = "Erreur lors de la vérification du fichier storage.json: $_"
+            Path = $null
         }
     }
 }
 
-# ===== Executions shop =====
+function Remove-CursorStorage {
+    try {
+        # Vérifier d'abord si le fichier existe
+        $exists = Test-CursorStorageExists
+        if (-not $exists.Success) {
+            return @{
+                Success = $false
+                Message = $exists.Message
+            }
+        }
+
+        $storagePath = $exists.Path
+        if (Test-Path $storagePath) {
+            Remove-Item -Path $storagePath -Force
+            return @{
+                Success = $true
+                Message = "Le fichier storage.json a été supprimé avec succès"
+            }
+        } else {
+            return @{
+                Success = $false
+                Message = "Le fichier storage.json n'existe pas"
+            }
+        }
+    }
+    catch {
+        return @{
+            Success = $false
+            Message = "Erreur lors de la suppression du fichier storage.json: $_"
+        }
+    }
+}
+
+# ===== Execution store =====
 function Start-AllActions {
     Write-Host "`n🏪 Starting all actions..." -ForegroundColor Cyan
     $results = @{
@@ -218,8 +245,8 @@ function Start-AllActions {
     }
     
     try {
-        # Step 1: MAC address modification
-        Write-Host "`n=== Step 1: MAC Address Modification ===" -ForegroundColor Yellow
+        # Step 1: Change MAC address
+        Write-Host "`n=== Step 1: Change MAC address ===" -ForegroundColor Yellow
         $adapter = Get-NetworkAdapters | Select-Object -First 1
         if ($adapter) {
             $newMac = New-MacAddress
@@ -232,20 +259,116 @@ function Start-AllActions {
             }
         }
 
-        # Step 2: storage.json file deletion
-        Write-Host "`n=== Step 2: storage.json File Deletion ===" -ForegroundColor Yellow
+        # Step 2: Delete storage.json file
+        Write-Host "`n=== Step 2: Delete storage.json file ===" -ForegroundColor Yellow
         $storageResult = Remove-CursorStorage
         $results.Storage = $storageResult.Success
 
         # Summary
-        Write-Host "`n=== Actions Summary ===" -ForegroundColor Cyan
+        Write-Host "`n=== Action Summary ===" -ForegroundColor Cyan
         Write-Host "MAC modification: $(if($results.MAC){'✓ Success'}else{'❌ Failed'})" -ForegroundColor $(if($results.MAC){'Green'}else{'Red'})
         Write-Host "storage.json deletion: $(if($results.Storage){'✓ Success'}else{'❌ Failed'})" -ForegroundColor $(if($results.Storage){'Green'}else{'Red'})
 
         return $results
     }
     catch {
-        Write-Host "`n❌ Error executing actions: $_" -ForegroundColor Red
+        Write-Host "`n❌ Error during action execution: $_" -ForegroundColor Red
         return $results
     }
-} 
+}
+
+function Execute-AllActions {
+    param (
+        [Parameter(Mandatory=$false)]
+        [switch]$ShowProgress = $true
+    )
+    
+    try {
+        # List of actions to perform
+        $actions = @(
+            @{ Name = "Retrieving network adapters"; Action = { Get-NetworkAdapters } },
+            @{ Name = "Generating new MAC address"; Action = { New-MacAddress } },
+            @{ Name = "Changing MAC address"; Action = { param($adapter, $mac) Set-MacAddress -AdapterName $adapter.Name -NewMacAddress $mac } },
+            @{ Name = "Deleting storage.json file"; Action = { Remove-CursorStorage } }
+        )
+        
+        $totalActions = $actions.Count
+        $currentAction = 0
+        
+        # Getting necessary data
+        $adapter = Get-NetworkAdapters | Select-Object -First 1
+        $newMac = New-MacAddress
+        
+        foreach ($actionItem in $actions) {
+            $currentAction++
+            $actionName = $actionItem.Name
+            $actionScript = $actionItem.Action
+            
+            # Display progress
+            if ($ShowProgress) {
+                $percentComplete = ($currentAction / $totalActions) * 100
+                Write-Progress -Activity "Executing actions" -Status $actionName -PercentComplete $percentComplete
+            }
+            
+            # Write to logs
+            Write-Host "🔄 $actionName" -ForegroundColor Cyan
+            
+            # Execute action with appropriate parameters if needed
+            switch ($actionName) {
+                "Changing MAC address" {
+                    & $actionScript $adapter $newMac
+                }
+                default {
+                    & $actionScript
+                }
+            }
+            
+            # Pause to see the progress (remove in production)
+            if ($ShowProgress) {
+                Start-Sleep -Milliseconds 500
+            }
+        }
+        
+        # Complete the progress bar
+        if ($ShowProgress) {
+            Write-Progress -Activity "Executing actions" -Completed
+        }
+        
+        Write-Host "✅ All actions executed successfully!" -ForegroundColor Green
+        return $true
+    }
+    catch {
+        Write-Host "❌ Error during action execution: $_" -ForegroundColor Red
+        return $false
+    }
+}
+
+# Interface for the "Execute all actions" button
+function Initialize-ExecuteAllButton {
+    param (
+        [System.Windows.Forms.Form]$Form
+    )
+    
+    $button = New-Object System.Windows.Forms.Button
+    $button.Text = "Execute all actions"
+    $button.Width = 200
+    $button.Height = 40
+    # Set other button properties
+    
+    $button.Add_Click({
+        $result = Execute-AllActions
+        if ($result) {
+            [System.Windows.Forms.MessageBox]::Show("All actions executed successfully!", "Success", 
+                [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+        }
+        else {
+            [System.Windows.Forms.MessageBox]::Show("An error occurred during action execution.", "Error", 
+                [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+        }
+    })
+    
+    return $button
+}
+
+# Function export
+Export-ModuleMember -Function Execute-AllActions, Initialize-ExecuteAllButton 

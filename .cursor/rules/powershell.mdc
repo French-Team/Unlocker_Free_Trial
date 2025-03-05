@@ -1,0 +1,70 @@
+---
+description: Création d'une interface PowerShell 7 modulaire, jolie et solide
+globs: 
+alwaysApply: false
+---
+## Création d'une interface PowerShell 7 modulaire, jolie et solide
+
+### **Principes de base**
+1. **Choisir un framework .NET pour la GUI**  
+   Utilisez **WinForms** ou **WPF** via .NET pour construire une interface graphique robuste et personnalisable <button class="citation-flag" data-index="4"><button class="citation-flag" data-index="7">. Ces frameworks offrent des contrôles visuels (boutons, formulaires, etc.) et une modularité native <button class="citation-flag" data-index="4"><button class="citation-flag" data-index="7">.  
+
+2. **Séparation des responsabilités**  
+   Divisez votre interface en **composants indépendants** (ex. un module pour les boutons, un autre pour les notifications). Chaque composant gère une seule fonctionnalité selon le principe *single responsibility* <button class="citation-flag" data-index="9">.  
+
+---
+
+### **Étapes clés pour une interface modulaire**
+
+#### **1. Structure modulaire avec PowerShell**
+- **Créez des fichiers séparés** :  
+  Stockez chaque composant (ex. `Form1.xaml`, `ButtonModule.ps1`) dans des fichiers distincts pour une maintenance aisée <button class="citation-flag" data-index="4"><button class="citation-flag" data-index="7">.  
+- **Utilisez des classes .NET** :  
+  Définissez des classes pour encapsuler les comportements (ex. une classe `SettingsForm` pour les paramètres) <button class="citation-flag" data-index="8"><button class="citation-flag" data-index="9">.  
+
+#### **2. Design visuel attrayant**
+- **Thèmes et styles** :  
+  Personnalisez les couleurs, polices et animations via les propriétés des contrôles .NET (ex. `BackColor`, `Font`) <button class="citation-flag" data-index="5"><button class="citation-flag" data-index="7">.  
+- **Oh My Posh pour les interfaces textuelles** :  
+  Si vous incluez des éléments CLI, utilisez `oh my posh` pour des prompt esthétiques et cohérents <button class="citation-flag" data-index="6">.  
+
+#### **3. Solidité et fiabilité**
+- **Gestion des erreurs** :  
+  Intégrez des `try/catch` blocs et des validations dans chaque module pour capturer les exceptions sans arrêter l’interface <button class="citation-flag" data-index="8">.  
+- **Séparation backend/frontend** :  
+  Isolez le code métier (PowerShell) du code d’interface (.NET) via des méthodes ou des services <button class="citation-flag" data-index="9">.  
+
+---
+
+### **Erreurs à éviter**
+
+1. **Mélanger logique métier et UI**  
+   Un composant UI doit **ne pas** contenir de code métier. Exemple : un bouton appelle une méthode externe pour exécuter une tâche <button class="citation-flag" data-index="9">.  
+
+2. **Ignorer les bonnes pratiques .NET**  
+   Respectez les conventions de nommage et les patterns de WinForms/WPF (ex. évitez les noms de contrôles génériques comme `Button1`) <button class="citation-flag" data-index="7"><button class="citation-flag" data-index="8">.  
+
+3. **Surcharger un composant**  
+   Un contrôle (ex. un formulaire) doit avoir **une seule responsabilité**. Exemple : un formulaire de connexion ne gère pas les paramètres <button class="citation-flag" data-index="9">.  
+
+4. **Oublier les tests**  
+   Validez chaque module séparément avant l’intégration. Utilisez `Pester` pour tester les interactions entre composants <button class="citation-flag" data-index="8">.  
+
+5. **Désorganiser les dépendances**  
+   Vérifiez que tous les assemblys .NET (ex. `System.Windows.Forms`) sont correctement référencés via `Add-Type` <button class="citation-flag" data-index="4">.  
+
+---
+
+### **Bonnes pratiques supplémentaires**
+- **Utilisez des designs réutilisables** :  
+  Créez des modèles (templates) pour les composants récurrents (ex. un bouton stylisé) <button class="citation-flag" data-index="7">.  
+- **Documentation des interfaces** :  
+  Ajoutez des commentaires clairs pour expliquer le rôle de chaque composant et ses dépendances <button class="citation-flag" data-index="8">.  
+- **Tests d’accessibilité** :  
+  Assurez-vous que l’interface est utilisable avec des outils comme le Narrateur de Windows <button class="citation-flag" data-index="7">.  
+
+---
+
+### **Références techniques**
+- **Pour WinForms** : Consultez la documentation de Microsoft sur les contrôles et événements <button class="citation-flag" data-index="4"><button class="citation-flag" data-index="7">.  
+- **Pour la modularité** : Appliquez les principes SOLID, notamment *Single Responsibility* et *Open/Closed* <button class="citation-flag" data-index="8"><button class="citation-flag" data-index="9">.  
