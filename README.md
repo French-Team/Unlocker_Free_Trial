@@ -78,12 +78,13 @@ $env:TEST_MODE = "true"
 
 ```
 Unlocker_Free_Trial/
-├── start.ps1          # Point d'entrée principal
-├── Step*.ps1          # Modules fonctionnels
-├── EN/                # Version anglaise
-│   ├── start.ps1
-│   └── Step*.ps1
-└── __tests__/         # Tests unitaires
+├── Step1_Start.ps1        # Point d'entrée et vérification des droits
+├── Step2_Admin.ps1        # Gestion des droits administrateur
+├── Step3_Interface.ps1    # Interface graphique (v2)
+├── Step4_MacAddress.ps1   # Gestion des adresses MAC
+├── Step5_FileManager.ps1  # Gestion des fichiers
+├── Step6_ExecuteAll.ps1   # Exécution des actions
+└── launcher.bat          # Lanceur sans console visible
 ```
 
 ## 🤝 Contribution
