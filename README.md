@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg?style=flat-square)
+![Version](https://img.shields.io/badge/version-2.0.0-blue.svg?style=flat-square)
 ![PowerShell](https://img.shields.io/badge/PowerShell-7.0+-5391FE.svg?style=flat-square&logo=powershell&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010+-lightgrey.svg?style=flat-square&logo=windows&logoColor=white)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](LICENSE)
@@ -18,10 +18,13 @@
 
 ## ✨ Fonctionnalités
 
-- 🎨 Interface graphique moderne et intuitive
+- 🎨 Interface graphique moderne et intuitive (v2)
+  - Nouveau design sombre avec accents orange
+  - Barre de progression visuelle
+  - Affichage en temps réel des actions
 - 🔄 Changement d'adresse MAC des adaptateurs réseau
 - 🗑️ Suppression du fichier storage.json
-- 🌍 Version bilingue (FR/EN) avec changement de langue à la volée
+- 🌍 Version bilingue (FR/EN) avec changement de langue à la volée (v2)
 - 🛡️ Mode administrateur automatique
 - 📝 Logs détaillés pour le débogage
 

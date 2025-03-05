@@ -24718,13 +24718,15 @@ Voulez-vous que nous essayions une autre approche pour personnaliser l'apparence
 
 _**User**_
 
-Utiliser un style personnalisé
+tu dois mettre a jour le readme en version v2
+attetion , tu ne le change ps, tu dois juste mettre a jour les informations du passage en v2:
+ajout de la barre de progression, multi langue, refond interface et couleur
 
 ---
 
 _**Assistant**_
 
-Je vais créer une barre de progression personnalisée avec un style moderne et cohérent avec notre interface. Voici la modification :
+Je vais mettre à jour le README pour refléter la version 2 et ses nouvelles fonctionnalités.
 
 
 ---
@@ -24732,144 +24734,41 @@ Je vais créer une barre de progression personnalisée avec un style moderne et 
 _****_
 
 ```diff
-          $btnExit = Create-StyledButton -text $global:Translations[$global:CurrentLanguage]["BtnExit"] -y ($buttonStartY + $buttonSpacing * 3) -customBackColor ([System.Drawing.Color]::FromArgb(185,45,45)) -fontFamily "consolas"
+  <div align="center">
   
--         # Barre de progression
--         $progressBar = New-Object System.Windows.Forms.ProgressBar
-+         # Barre de progression personnalisée
-+         $progressBar = New-Object System.Windows.Forms.Panel
-          $progressBar.Location = New-Object System.Drawing.Point($buttonX, ($buttonStartY + $buttonSpacing * 4))
--         $progressBar.Size = New-Object System.Drawing.Size($buttonWidth, 10)  # Plus fine
--         $progressBar.Style = 'Continuous'
--         $progressBar.Value = 0
--         $progressBar.BackColor = [System.Drawing.Color]::FromArgb(20,20,20)  # Fond sombre
--         $progressBar.ForeColor = [System.Drawing.Color]::FromArgb(255,140,0)  # Orange
--         $progressBar.MarqueeAnimationSpeed = 30
--         $progressBar.Visible = $true
--         $mainPanel.Controls.Add($progressBar)
-+         $progressBar.Size = New-Object System.Drawing.Size($buttonWidth, 10)
-+         $progressBar.BackColor = [System.Drawing.Color]::FromArgb(20,20,20)
-+         $progressBar.BorderStyle = [System.Windows.Forms.BorderStyle]::None
-+ 
-+         # Panneau de progression interne
-+         $progressInner = New-Object System.Windows.Forms.Panel
-+         $progressInner.Location = New-Object System.Drawing.Point(0, 0)
-+         $progressInner.Size = New-Object System.Drawing.Size(0, 10)
-+         $progressInner.BackColor = [System.Drawing.Color]::FromArgb(255,140,0)
-+         $progressInner.BorderStyle = [System.Windows.Forms.BorderStyle]::None
-+         $progressBar.Controls.Add($progressInner)
-+ 
-+         # Fonction pour mettre à jour la progression
-+         $progressBar.UpdateProgress = {
-+             param($value)
-+             $width = [math]::Round(($this.Width * $value) / 100)
-+             $this.Controls[0].Width = $width
-+         }
+- ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg?style=flat-square)
++ ![Version](https://img.shields.io/badge/version-2.0.0-blue.svg?style=flat-square)
+  ![PowerShell](https://img.shields.io/badge/PowerShell-7.0+-5391FE.svg?style=flat-square&logo=powershell&logoColor=white)
+  ![Platform](https://img.shields.io/badge/platform-Windows%2010+-lightgrey.svg?style=flat-square&logo=windows&logoColor=white)
+  ## ✨ Fonctionnalités
   
-          # Label de statut
-                  $form = $this.FindForm()
-                  $statusLabel = $form.Controls[0].Controls | Where-Object { $_ -is [System.Windows.Forms.Label] -and $_.Font.Size -eq 9 }
--                 $progressBar = $form.Controls[0].Controls | Where-Object { $_ -is [System.Windows.Forms.ProgressBar] }
-+                 $progressBar = $form.Controls[0].Controls | Where-Object { $_ -is [System.Windows.Forms.Panel] -and $_.Name -eq 'progressBar' }
-                  
-                  if ($statusLabel -and $progressBar) {
-                      $this.Enabled = $false
--                     $progressBar.Value = 0
-+                     $progressBar.Controls[0].Width = 0
-                      $statusLabel.Text = "Initialisation..."
-                      Start-Sleep -Milliseconds 500
-                      
-                      # Mise à jour de la progression pour la modification MAC
--                     $progressBar.Value = 10
-+                     $progressBar.Controls[0].Width = 10
-                      $statusLabel.Text = "Chargement du script MAC..."
-                      Start-Sleep -Milliseconds 500
-                      
-                      # Charger et exécuter le script MAC
-                      . "$PSScriptRoot\Step4_MacAddress.ps1"
--                     $progressBar.Value = 20
-+                     $progressBar.Controls[0].Width = 20
-                      $statusLabel.Text = "Récupération de l'adaptateur réseau..."
-                      Start-Sleep -Milliseconds 500
-                      $macResult = $false
-                      if ($adapter) {
--                         $progressBar.Value = 30
-+                         $progressBar.Controls[0].Width = 30
-                          $statusLabel.Text = "Génération de la nouvelle adresse MAC..."
-                          Start-Sleep -Milliseconds 500
-                          
-                          $newMac = New-MacAddress
-                          if ($newMac) {
--                             $progressBar.Value = 40
-+                             $progressBar.Controls[0].Width = 40
-                              $statusLabel.Text = "Application de la nouvelle adresse MAC..."
-                              Start-Sleep -Milliseconds 500
-                              
-                              $macResult = Set-MacAddress -AdapterName $adapter.Name -MacAddress $newMac
-                              if ($macResult) {
--                                 $progressBar.Value = 50
-+                                 $progressBar.Controls[0].Width = 50
-                                  $statusLabel.Text = "Adresse MAC modifiée avec succès"
-                                  Start-Sleep -Milliseconds 500
-                      
-                      # Mise à jour de la progression pour la suppression du storage
--                     $progressBar.Value = 60
-+                     $progressBar.Controls[0].Width = 60
-                      $statusLabel.Text = "Chargement du script de gestion des fichiers..."
-                      Start-Sleep -Milliseconds 500
-                      
-                      if (Test-Path $scriptPath) {
--                         $progressBar.Value = 70
-+                         $progressBar.Controls[0].Width = 70
-                          $statusLabel.Text = "Vérification du fichier storage.json..."
-                          Start-Sleep -Milliseconds 500
-                          
-                          . $scriptPath
--                         $progressBar.Value = 80
-+                         $progressBar.Controls[0].Width = 80
-                          $statusLabel.Text = "Suppression du fichier storage.json..."
-                          Start-Sleep -Milliseconds 500
-                          
-                          if ($storageResult) {
--                             $progressBar.Value = 90
-+                             $progressBar.Controls[0].Width = 90
-                              $statusLabel.Text = "Fichier storage.json supprimé avec succès"
-                              Start-Sleep -Milliseconds 500
-                      
-                      # Mise à jour finale de la progression
--                     $progressBar.Value = 100
-+                     $progressBar.Controls[0].Width = 100
-                      $statusLabel.Text = "Actions terminées"
-                      Start-Sleep -Milliseconds 500
-                  if ($statusLabel -and $progressBar) {
-                      $this.Enabled = $true
--                     $progressBar.Value = 0
-+                     $progressBar.Controls[0].Width = 0
-                      $statusLabel.Text = $global:Translations[$global:CurrentLanguage]["Ready"]
-                  }
+- - 🎨 Interface graphique moderne et intuitive
++ - 🎨 Interface graphique moderne et intuitive (v2)
++   - Nouveau design sombre avec accents orange
++   - Barre de progression visuelle
++   - Affichage en temps réel des actions
+  - 🔄 Changement d'adresse MAC des adaptateurs réseau
+  - 🗑️ Suppression du fichier storage.json
+- - 🌍 Version bilingue (FR/EN) avec changement de langue à la volée
++ - 🌍 Version bilingue (FR/EN) avec changement de langue à la volée (v2)
+  - 🛡️ Mode administrateur automatique
+  - 📝 Logs détaillés pour le débogage
 ```
 
 ---
 
 _****_
 
-J'ai créé une barre de progression personnalisée avec les caractéristiques suivantes :
+J'ai mis à jour le README pour refléter la version 2 avec les modifications suivantes :
 
-1. Un panneau principal (`$progressBar`) avec :
-   - Fond sombre (RGB: 20,20,20)
-   - Pas de bordure
-   - Hauteur de 10 pixels
+1. Changé le badge de version de 1.0.0 à 2.0.0
+2. Ajouté les détails des nouvelles fonctionnalités de la v2 :
+   - Nouveau design sombre avec accents orange
+   - Barre de progression visuelle
+   - Affichage en temps réel des actions
+3. Marqué les fonctionnalités qui ont été améliorées dans la v2 avec "(v2)"
 
-2. Un panneau interne (`$progressInner`) qui représente la progression avec :
-   - Couleur orange (RGB: 255,140,0)
-   - Pas de bordure
-   - Largeur qui s'ajuste en fonction de la progression
-
-3. Une fonction `UpdateProgress` qui permet de mettre à jour la progression de manière fluide
-
-4. J'ai également mis à jour toutes les références à la barre de progression dans le code pour utiliser la nouvelle version personnalisée.
-
-Cette nouvelle barre de progression devrait avoir un aspect plus moderne et cohérent avec le reste de l'interface. Voulez-vous que j'ajoute des effets de transition ou d'autres améliorations visuelles ?
+Voulez-vous que j'ajoute d'autres détails spécifiques sur les améliorations de la v2 ?
 
 ---
 
