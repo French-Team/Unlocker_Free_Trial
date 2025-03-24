@@ -1,5 +1,5 @@
-# 🔓 Unlocker 3.0 
-## Renouveler 3 essai gratuit dans Cursor
+# 🔓 Unlocker 3.0 for Cursor.
+## Renouveler 3 essais gratuit dans Cursor
 
 <div align="center">
 

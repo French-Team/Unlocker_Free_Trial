@@ -1,0 +1,57 @@
+---
+description: crées un nouveau fichier, tu dois structurer ton code en suivant les principes de modularité, de TDD, et du principe "open/closed
+globs: 
+alwaysApply: true
+---
+
+Lorsque tu crées un nouveau fichier, tu dois structurer ton code en suivant les principes de modularité, de TDD, et du principe "open/closed". Voici comment procéder :
+
+Fichier Orchestrateur : Ce fichier principal, nommé "ORC_[nom_du_module]", sera le point d'entrée de ton application. Il doit contenir le nom du module principal pour éviter toute confusion dans le code. Par exemple, pour un module d'horloge, le fichier s'appellera "ORC_horloge.py".
+
+Principe de l'Escalier : Chaque fonction doit être écrite dans un fichier séparé. Si une fonction a besoin d'une sous-fonction, tu dois créer un nouveau fichier pour cette sous-fonction. Ce processus se répète à chaque niveau, créant ainsi une structure en escalier.
+
+Test-Driven Development (TDD) : Avant d'écrire une fonction, tu dois d'abord écrire les tests unitaires pour cette fonction. Les tests doivent être placés dans un répertoire séparé, par exemple tests/.
+
+Principe Open/Closed : Les fonctions doivent être ouvertes à l'extension mais fermées à la modification. Cela signifie que tu dois pouvoir ajouter de nouvelles fonctionnalités sans modifier le code existant. Utilise des interfaces et des classes abstraites pour atteindre cet objectif.
+
+Fichier composition.md : Avant de commencer à écrire le code, tu dois créer un fichier composition.md qui décrit la structure complète de ton projet. Ce fichier doit être validé par l'utilisateur avant de commencer le développement. Il doit inclure :
+
+La liste de tous les fichiers et leurs rôles.
+Les dépendances entre les fichiers.
+Les tests unitaires associés à chaque fonction.
+Nomenclature des Fichiers :
+
+ORC : Fichier principal, par exemple "ORC_horloge.py".
+FCT : Fichiers contenant les fonctions principales, par exemple "FCT_heure.py".
+SFC : Fichiers contenant les sous-fonctions, par exemple "SFC_minute.py".
+SSF : Fichiers contenant les sous-sous-fonctions, par exemple "SSF_seconde.py".
+Exemple de Structure :
+
+composition.md
+
+Décrit la structure du projet, les fichiers, et les tests.
+ORC_horloge.py
+
+Appelle FCT_heure.py
+Appelle FCT_alarme.py
+FCT_heure.py
+
+Contient FCT_heure
+Appelle SFC_minute.py
+Appelle SFC_formatage.py
+SFC_minute.py
+
+Contient SFC_minute
+Si SFC_minute a besoin d'une autre fonction, crée SSF_seconde.py
+SSF_seconde.py
+
+Contient SSF_seconde
+FCT_alarme.py
+
+Contient FCT_alarme
+Appelle SFC_notification.py
+Appelle SFC_repetition.py
+tests/
+
+Contient les tests unitaires pour chaque fonction.
+En suivant cette structure, chaque fichier ne contient qu'une seule fonction ou un ensemble de fonctions directement liées, ce qui facilite la maintenance et la compréhension du code. Le fichier composition.md assure que la structure est bien définie et validée avant le début du développement.

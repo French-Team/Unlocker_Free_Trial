@@ -45,10 +45,10 @@ function Remove-CursorStorage {
             }
         } else {
             # Rayon fichier non trouvé
-            Write-Host "  ⚠️ Fichier non trouvé" -ForegroundColor Yellow
+            Write-Host "  ⚠️ Le fichier storage.json n'existe pas déjà" -ForegroundColor Yellow
             return @{
-                Success = $false
-                Message = "Le fichier n'existe pas"
+                Success = $true  # On considère que c'est un succès puisque le fichier n'existe pas (objectif atteint)
+                Message = "Le fichier storage.json n'existe pas déjà"
             }
         }
     }

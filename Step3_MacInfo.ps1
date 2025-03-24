@@ -12,19 +12,16 @@ function Get-CurrentMacInfo {
     try {
         # Rayon recherche d'adaptateurs
         Write-Host "  🔍 Recherche d'adaptateurs actifs..." -ForegroundColor Gray
-        $adapter = Get-NetAdapter | 
-                  Where-Object { $_.Status -eq 'Up' } | 
-                  Select-Object -First 1
+        $adapter = Get-NetworkAdapters | Select-Object -First 1
         
         # Rayon informations
         if ($adapter) {
-            Write-Host "  ✓ Adaptateur trouvé: $($adapter.Name)" -ForegroundColor Green
             return @{
                 Success = $true
-                AdapterName = $adapter.Name
-                Description = $adapter.InterfaceDescription
-                MacAddress = $adapter.MacAddress
-                Status = $adapter.Status
+                Data = @{
+                    AdapterName = Format-NetworkAdapter $adapter
+                    MacAddress = $adapter.MacAddress
+                }
             }
         }
 
@@ -32,7 +29,7 @@ function Get-CurrentMacInfo {
         Write-Host "  ⚠️ Aucun adaptateur actif trouvé" -ForegroundColor Yellow
         return @{
             Success = $false
-            Message = "Aucun adaptateur réseau actif trouvé"
+            Message = "NoNetwork"
         }
     }
     catch {
@@ -40,7 +37,7 @@ function Get-CurrentMacInfo {
         Write-Host "  ❌ Error lors de la recherche: $($_.Exception.Message)" -ForegroundColor Red
         return @{
             Success = $false
-            Message = "Error: $($_.Exception.Message)"
+            Message = "NetworkError"
         }
     }
 }
@@ -59,7 +56,7 @@ function Update-MacInfoLabel {
             Write-Host "  ✓ Informations récupérées avec succès" -ForegroundColor Green
             return @{
                 Success = $true
-                Text = "$($global:Translations[$global:CurrentLanguage]['NetworkCard']) : $($macInfo.Description)`n$($global:Translations[$global:CurrentLanguage]['MacAddress']) : $($macInfo.MacAddress)"
+                Text = "$($global:Translations[$global:CurrentLanguage]['NetworkCard']) : $($macInfo.Data.AdapterName)`n$($global:Translations[$global:CurrentLanguage]['MacAddress']) : $($macInfo.Data.MacAddress)"
             }
         } 
         else {

@@ -11,31 +11,56 @@ function Get-NetworkAdapters {
     Write-Host "🏪 Accès au magasin des adaptateurs..." -ForegroundColor Cyan
     
     try {
-        # Rayon recherche
-        Write-Host "  🔍 Recherche des adaptateurs actifs..." -ForegroundColor Gray
-        $adapters = Get-NetAdapter | Where-Object { $_.Status -eq 'Up' } | Select-Object @{
-            Name = 'Name'; Expression = { $_.Name }
-        }, @{
-            Name = 'MacAddress'; Expression = { $_.MacAddress }
-        }, @{
-            Name = 'Status'; Expression = { $_.Status }
-        }, @{
-            Name = 'InterfaceDescription'; Expression = { $_.InterfaceDescription }
+        # Récupérer uniquement les adaptateurs physiques
+        $adapters = Get-NetAdapter | Where-Object { 
+            $_.PhysicalMediaType -ne 'Unspecified' -and 
+            $_.PhysicalMediaType -ne '' -and 
+            -not $_.Virtual -and 
+            $_.MediaConnectionState -eq 'Connected'
         }
-
-        # Rayon résultats
-        if ($adapters) {
-            Write-Host "  ✓ Adaptateurs trouvés: $($adapters.Count)" -ForegroundColor Green
-            return $adapters
-        } else {
-            Write-Host "  ⚠️ Aucun adaptateur trouvé" -ForegroundColor Yellow
+        
+        if (-not $adapters) {
+            Write-Host "Aucun adaptateur réseau physique trouvé." -ForegroundColor Yellow
             return $null
         }
+        
+        # Enrichir les informations des adaptateurs
+        $enrichedAdapters = $adapters | ForEach-Object {
+            $driverInfo = Get-NetAdapterAdvancedProperty -Name $_.Name -ErrorAction SilentlyContinue
+            $regPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}"
+            $driverDesc = $_.InterfaceDescription
+            $driverVersion = "N/A"
+            
+            # Rechercher dans toutes les sous-clés pour trouver l'adaptateur
+            Get-ChildItem -Path $regPath -ErrorAction SilentlyContinue | ForEach-Object {
+                $key = $_
+                try {
+                    $properties = Get-ItemProperty -Path $key.PSPath -ErrorAction SilentlyContinue
+                    if ($properties.DriverDesc -eq $driverDesc) {
+                        $driverVersion = $properties.DriverVersion
+                    }
+                } catch { }
+            }
+            
+            [PSCustomObject]@{
+                Name = $_.Name
+                MacAddress = $_.MacAddress
+                Status = $_.Status
+                Speed = $_.LinkSpeed
+                ProductName = $_.InterfaceDescription
+                DriverVersion = $driverVersion
+            }
+        }
+        
+        Write-Host "Adaptateurs réseau trouvés :" -ForegroundColor Green
+        foreach ($adapter in $enrichedAdapters) {
+            Write-Host "     - $(Format-NetworkAdapter $adapter)" -ForegroundColor Green
+        }
+        
+        return $enrichedAdapters
     }
     catch {
-        # Caisse des erreurs
-        Write-Host "  ❌ Error lors de la recherche: $_" -ForegroundColor Red
-        Write-Error "Error lors de la récupération des adaptateurs: $_"
+        Write-Host "Erreur lors de la récupération des adaptateurs : $_" -ForegroundColor Red
         return $null
     }
 }
@@ -119,52 +144,124 @@ function Set-MacAddress {
         }
         Write-Host "  ✓ Adresse MAC valide" -ForegroundColor Green
 
-        # Rayon désactivation
-        Write-Host "  🔌 Désactivation de l'adaptateur..." -ForegroundColor Gray
-        Disable-NetAdapter -Name $AdapterName -Confirm:$false
-        Start-Sleep -Seconds 2
-        Write-Host "  ✓ Adaptateur désactivé" -ForegroundColor Green
+        # Nous ne désactivons plus l'adaptateur ici, car cela nécessite des privilèges administrateur
+        # Cette opération sera gérée par le script d'élévation
 
         # Rayon modification registre avec élévation de privilèges
         Write-Host "  🔧 Modification du registre..." -ForegroundColor Gray
         
-        # Création du script temporaire pour la modification du registre
+        # Version améliorée du script temporaire pour la modification du registre
         $tempScript = @"
-`$regPath = "HKLM:SYSTEM\CurrentControlSet\Control\Class\{4D36E972-E325-11CE-BFC1-08002BE10318}"
+# Définir les variables nécessaires
 `$success = `$false
+`$regPath = "HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4D36E972-E325-11CE-BFC1-08002BE10318}"
+`$targetAdapter = "$($adapter.InterfaceDescription)"
+`$newMacValue = "$($MacAddress.Replace("-", ""))"
+`$adapterName = "$AdapterName"
 
-Get-ChildItem -Path `$regPath | ForEach-Object {
-    `$driverDesc = (Get-ItemProperty -Path `$_.PSPath).DriverDesc
-    if (`$driverDesc -eq '$($adapter.InterfaceDescription)') {
-        Set-ItemProperty -Path `$_.PSPath -Name "NetworkAddress" -Value '$($MacAddress.Replace("-", ""))' -Force
-        `$success = `$true
-        Write-Host "Modification du registre effectuée avec succès"
+# Journalisation
+Write-Host "Recherche de l'adaptateur dans le registre : `$targetAdapter"
+Write-Host "Nouvelle adresse MAC (sans tirets) : `$newMacValue"
+Write-Host "Nom de l'adaptateur pour activation/désactivation : `$adapterName"
+
+# Désactivation de l'adaptateur avec privilèges administrateur
+Write-Host "Désactivation de l'adaptateur..."
+try {
+    Disable-NetAdapter -Name `$adapterName -Confirm:`$false
+    Start-Sleep -Seconds 2
+    Write-Host "Adaptateur désactivé avec succès"
+} catch {
+    Write-Host "Erreur lors de la désactivation de l'adaptateur : `$_"
+    # Continuer malgré l'erreur, car la modification du registre peut toujours fonctionner
+}
+
+# Parcourir les sous-clés du registre
+`$subKeys = Get-ChildItem -Path `$regPath | Where-Object { `$_.PSPath -notmatch "Properties" }
+Write-Host "Nombre de sous-clés trouvées : `$(`$subKeys.Count)"
+
+foreach (`$key in `$subKeys) {
+    try {
+        `$properties = Get-ItemProperty -Path `$key.PSPath -ErrorAction SilentlyContinue
+        
+        # Vérifier si la propriété DriverDesc existe et correspond
+        if (`$properties.DriverDesc -ne `$null) {
+            if (`$properties.DriverDesc -eq `$targetAdapter) {
+                Write-Host "Adaptateur trouvé dans le registre : `$(`$key.PSPath)"
+                
+                # Modifier l'adresse MAC
+                Set-ItemProperty -Path `$key.PSPath -Name "NetworkAddress" -Value `$newMacValue -Force
+                Write-Host "Adresse MAC modifiée avec succès"
+                `$success = `$true
+                break
+            }
+        }
+    }
+    catch {
+        Write-Host "Erreur lors de l'accès à une sous-clé : `$_"
     }
 }
 
+# Si l'adaptateur n'a pas été trouvé par description, essayer de le trouver par indice de composant
 if (-not `$success) {
-    throw "Échec de la modification dans le registre"
+    Write-Host "Tentative de recherche par indice de composant..."
+    foreach (`$key in `$subKeys) {
+        try {
+            `$properties = Get-ItemProperty -Path `$key.PSPath -ErrorAction SilentlyContinue
+            if (`$properties.NetCfgInstanceId -ne `$null) {
+                `$netAdapter = Get-NetAdapter | Where-Object { `$_.InterfaceGuid -eq `$properties.NetCfgInstanceId }
+                if (`$netAdapter -and `$netAdapter.InterfaceDescription -eq `$targetAdapter) {
+                    Write-Host "Adaptateur trouvé via NetCfgInstanceId dans : `$(`$key.PSPath)"
+                    Set-ItemProperty -Path `$key.PSPath -Name "NetworkAddress" -Value `$newMacValue -Force
+                    Write-Host "Adresse MAC modifiée avec succès"
+                    `$success = `$true
+                    break
+                }
+            }
+        }
+        catch {
+            Write-Host "Erreur lors de la recherche par indice : `$_"
+        }
+    }
 }
+
+# Réactivation de l'adaptateur avec privilèges administrateur
+Write-Host "Réactivation de l'adaptateur..."
+try {
+    Start-Sleep -Seconds 2
+    Enable-NetAdapter -Name `$adapterName -Confirm:`$false
+    Write-Host "Adaptateur réactivé avec succès"
+} catch {
+    Write-Host "Erreur lors de la réactivation de l'adaptateur : `$_"
+}
+
+if (-not `$success) {
+    throw "Adaptateur non trouvé dans le registre. Vérifiez les permissions ou essayez avec un autre adaptateur."
+}
+
+exit `$success.ToString()
 "@
 
         $tempFile = [System.IO.Path]::GetTempFileName() + ".ps1"
-        $tempScript | Out-File -FilePath $tempFile -Encoding UTF8
+        # Utiliser l'encodage ASCII pour éviter tous problèmes d'encodage
+        $tempScript | Out-File -FilePath $tempFile -Encoding ASCII
 
-        # Exécution du script avec élévation de privilèges
-        $process = Start-Process pwsh.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$tempFile`"" -Verb RunAs -Wait -PassThru
+        # Exécution du script avec élévation de privilèges et fenêtre cachée
+        Write-Host "  📄 Exécution du script d'élévation : $tempFile" -ForegroundColor Gray
+        $process = Start-Process pwsh.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$tempFile`"" -Verb RunAs -Wait -PassThru -WindowStyle Hidden
+        
+        # Journalisation du résultat
+        Write-Host "  🔢 Code de sortie : $($process.ExitCode)" -ForegroundColor Gray
+        
+        # Nettoyage
         Remove-Item $tempFile -Force
+        Write-Host "  🧹 Fichier temporaire supprimé : $tempFile" -ForegroundColor Gray
 
         if ($process.ExitCode -ne 0) {
-            throw "Échec de la modification du registre"
+            throw "Échec de la modification du registre (code $($process.ExitCode))"
         }
 
         Write-Host "  ✓ Registre modifié" -ForegroundColor Green
-
-        # Rayon réactivation
-        Write-Host "  🔌 Réactivation de l'adaptateur..." -ForegroundColor Gray
-        Start-Sleep -Seconds 2
-        Enable-NetAdapter -Name $AdapterName -Confirm:$false
-        Write-Host "  ✓ Adaptateur réactivé" -ForegroundColor Green
+        Write-Host "  ✓ Adaptateur désactivé et réactivé" -ForegroundColor Green
 
         return $true
     }
@@ -172,14 +269,32 @@ if (-not `$success) {
         # Caisse des erreurs
         Write-Host "  ❌ Error lors de la modification: $_" -ForegroundColor Red
         Write-Error "Error lors de la modification de l'adresse MAC: $_"
-        # Tentative de réactivation en cas d'erreur
-        try { 
-            Enable-NetAdapter -Name $AdapterName -Confirm:$false 
-            Write-Host "  ⚠️ Adaptateur réactivé après erreur" -ForegroundColor Yellow
-        } catch { }
+        # Nous ne tentons plus de réactiver l'adaptateur ici, car cette opération est désormais
+        # gérée entièrement dans le script d'élévation
         return $false
     }
-} 
+}
+
+# Fonction pour formater les informations de l'adaptateur réseau
+function Format-NetworkAdapter {
+    param (
+        [Parameter(Mandatory=$true)]
+        [PSCustomObject]$Adapter
+    )
+    
+    try {
+        # Extraire la vitesse numérique de la chaîne (par exemple, "1 Gbps" -> 1)
+        $speedMatch = $Adapter.Speed -match '(\d+)\s*Gbps'
+        $speedValue = if ($matches) { $matches[1] } else { "N/A" }
+        
+        # Retourner la chaîne formatée
+        return "$($Adapter.ProductName) - $speedValue Gbps"
+    }
+    catch {
+        Write-Host "Erreur lors du formatage de l'adaptateur : $_" -ForegroundColor Red
+        return $Adapter.ProductName
+    }
+}
 
 
 

@@ -6,6 +6,17 @@
 #               - Magasin des événements (clics, survols)
 # =================================================================
 
+# Variables de script pour les contrôles globaux
+$script:progressBar = $null
+$script:statusLabel = $null
+
+# Charger l'encodage Unicode uniquement pour l'interface, sans l'appliquer globalement
+if (Test-Path "$PSScriptRoot\Step2_UTF8.ps1") {
+    . "$PSScriptRoot\Step2_UTF8.ps1"
+    # Réactiver l'encodage Unicode pour l'interface
+    Set-ConsoleEncoding
+}
+
 # Charger les dépendances seulement si on n'est pas en mode test
 if (-not $env:TEST_MODE) {
     Add-Type -AssemblyName System.Windows.Forms
@@ -16,17 +27,18 @@ if (-not $env:TEST_MODE) {
 $global:CurrentLanguage = "FR"
 $global:Translations = @{
     "FR" = @{
-        "WindowTitle" = "Unlocker 3.0 - Essai gratuit"
+        "WindowTitle" = "Unlocker 3.2 - Essai gratuit"
         "MainTitle" = "Unlocker"
-        "numTitle" = "3.0" 
+        "numTitle" = "3.2" 
         "freeTitle" = "Essai gratuit"
         "Subtitle" = "Renouveler" 
-        "iconTitle" = "👻"
+        "iconTitle" = "👻"  # Remise de l'emoji fantôme
         "CursorTitle" = "Cursor"
         "BtnMacAddress" = "1. Modifier l'adresse MAC"
         "BtnDeleteStorage" = "2. Supprimer storage.json"
-        "BtnExecuteAll" = "3. Exécuter toutes les actions"
-        "BtnExit" = "4. Quitter"
+        "BtnMachineGuid" = "3. Modifier MachineGuid"
+        "BtnExecuteAll" = "4. Exécuter toutes les actions"
+        "BtnExit" = "5. Quitter"
         "Ready" = "Prêt"
         "NetworkCard" = "Carte réseau active"
         "MacAddress" = "Adresse MAC"
@@ -46,6 +58,8 @@ $global:Translations = @{
         "MacFailure" = "❌ Échec"
         "StorageSuccess" = "✓ Succès"
         "StorageFailure" = "❌ Échec - "
+        "MachineGuidSuccess" = "✓ MachineGuid modifié"
+        "MachineGuidFailure" = "❌ Échec modification MachineGuid"
         "RegistrationPrompt" = "Veuillez procéder à votre nouvelle inscription sur cursor.com"
         "GoToCursor" = "Aller sur cursor.com"
         "TempEmails" = "Emails Temporaires"
@@ -62,19 +76,25 @@ $global:Translations = @{
         "DeletingStorage" = "Suppression du fichier storage.json..."
         "StorageDeleted" = "Fichier storage.json supprimé avec succès"
         "ActionsCompleted" = "Actions terminées"
+        "ChangingMAC" = "Modification de l'adresse MAC"
+        "ChangingMachineGuid" = "Modification de MachineGuid"
+        "Completed" = "Terminé"
+        "WaitingForNetwork" = "Attente du réseau..."
+        "StorageNotFound" = "Le fichier storage.json n'existe pas."
     }
     "EN" = @{
         "WindowTitle" = "Unlocker - Free Trial"
         "MainTitle" = "Unlocker"
-        "numTitle" = "3.0" 
+        "numTitle" = "3.2" 
         "freeTitle" = "Free Trial"
         "Subtitle" = "Renew" 
-        "iconTitle" = "👻"
+        "iconTitle" = "👻"  # Remise de l'emoji fantôme
         "CursorTitle" = "Cursor"
         "BtnMacAddress" = "1. Change MAC Address"
         "BtnDeleteStorage" = "2. Delete storage.json"
-        "BtnExecuteAll" = "3. Execute All Actions"
-        "BtnExit" = "4. Exit"
+        "BtnMachineGuid" = "3. Change MachineGuid"
+        "BtnExecuteAll" = "4. Execute All Actions"
+        "BtnExit" = "5. Exit"
         "Ready" = "Ready"
         "NetworkCard" = "Active Network Card"
         "MacAddress" = "MAC Address"
@@ -94,6 +114,8 @@ $global:Translations = @{
         "MacFailure" = "❌ Failed"
         "StorageSuccess" = "✓ Success"
         "StorageFailure" = "❌ Failed - "
+        "MachineGuidSuccess" = "✓ MachineGuid changed"
+        "MachineGuidFailure" = "❌ MachineGuid change failed"
         "RegistrationPrompt" = "Please proceed with your new registration on cursor.com"
         "GoToCursor" = "Go to cursor.com"
         "TempEmails" = "Temporary Emails"
@@ -110,7 +132,383 @@ $global:Translations = @{
         "DeletingStorage" = "Deleting storage.json file..."
         "StorageDeleted" = "Storage.json file successfully deleted"
         "ActionsCompleted" = "Actions completed"
+        "ChangingMAC" = "Modifying MAC address"
+        "ChangingMachineGuid" = "Modifying MachineGuid"
+        "Completed" = "Completed"
+        "WaitingForNetwork" = "Waiting for network..."
+        "StorageNotFound" = "The storage.json file does not exist."
     }
+}
+
+# Importer les scripts nécessaires
+try {
+    . "$PSScriptRoot\Step4_MacAddress.ps1"
+    . "$PSScriptRoot\Step3_NetworkInfoPanel.ps1"
+    . "$PSScriptRoot\Step7_RegistryManager.ps1"  # Gestionnaire de registre pour le MachineGuid
+
+    # Chargement explicite du gestionnaire de barre de progression
+    $step8Path = Join-Path -Path $PSScriptRoot -ChildPath "Step8_ProgressBar.ps1"
+    if (Test-Path $step8Path) {
+        . $step8Path
+        Write-Host "✅ Gestionnaire de barre de progression chargé avec succès" -ForegroundColor Green
+        # Vérifier que les fonctions sont disponibles
+        if (Get-Command -Name "Update-ProgressBar" -ErrorAction SilentlyContinue) {
+            Write-Host "  ✓ Fonction Update-ProgressBar disponible" -ForegroundColor Green
+        }
+        if (Get-Command -Name "Reset-ProgressBar" -ErrorAction SilentlyContinue) {
+            Write-Host "  ✓ Fonction Reset-ProgressBar disponible" -ForegroundColor Green
+        }
+        if (Get-Command -Name "Update-StepProgress" -ErrorAction SilentlyContinue) {
+            Write-Host "  ✓ Fonction Update-StepProgress disponible" -ForegroundColor Green
+        }
+    } else {
+        Write-Host "❌ Gestionnaire de barre de progression non trouvé: $step8Path" -ForegroundColor Red
+        throw "Le fichier Step8_ProgressBar.ps1 est requis mais n'a pas été trouvé."
+    }
+} catch {
+    Write-Host "⚠️ Attention : Certains scripts n'ont pas pu être chargés. L'application continuera avec des fonctionnalités limitées." -ForegroundColor Yellow
+    Write-Host "Détails de l'erreur : $_" -ForegroundColor Red
+} 
+
+# Variables globales pour les styles des valeurs spécifiques uniquement
+$global:ValueDisplayStyle = @{
+    MacAddress = @{
+        TextColor = [System.Drawing.Color]::FromArgb(255,140,0)  # Orange
+        FontFamily = "Consolas"
+        FontSize = 10
+        FontStyle = [System.Drawing.FontStyle]::Bold
+    }
+    MachineGuid = @{
+        TextColor = [System.Drawing.Color]::FromArgb(255,140,0)  # Orange
+        FontFamily = "Consolas"
+        FontSize = 14
+        FontStyle = [System.Drawing.FontStyle]::Bold
+    }
+}
+
+# Importer les fonctions depuis Step6_ExecuteAll.ps1
+$step6Path = Join-Path -Path $PSScriptRoot -ChildPath "Step6_ExecuteAll.ps1"
+if (Test-Path $step6Path) {
+    . $step6Path
+    Write-Host "✓ Module d'exécution globale chargé (pour résumé d'actions)" -ForegroundColor Green
+} else {
+    Write-Host "❌ Module d'exécution globale non trouvé: $step6Path" -ForegroundColor Red
+}
+
+# Fonction pour exécuter toutes les actions
+function Execute-AllActions {
+    param (
+        [string]$MacAddress,
+        [bool]$ShouldResetMachineGuid,
+        [bool]$ShouldDeleteStorageFile,
+        [System.Windows.Forms.ProgressBar]$ProgressControl,
+        [System.Windows.Forms.Label]$StatusLabel
+    )
+    
+    $results = @{
+        MAC = $false
+        Storage = $false
+        MachineGuid = $false
+        StorageMessage = ""
+    }
+    
+    try {
+        # 1. Modification de l'adresse MAC
+        if ($ProgressControl) { 
+            $ProgressControl.Value = 25
+            $StatusLabel.Text = $global:Translations[$global:CurrentLanguage]["ChangingMAC"]
+        }
+        
+        $adapter = Get-NetworkAdapters | Select-Object -First 1
+        if ($adapter) {
+            $results.MAC = Set-MacAddress -AdapterName $adapter.Name -MacAddress $MacAddress
+        }
+        
+        # 2. Suppression du fichier storage.json
+        if ($ShouldDeleteStorageFile) {
+            if ($ProgressControl) { 
+                $ProgressControl.Value = 50
+                $StatusLabel.Text = $global:Translations[$global:CurrentLanguage]["DeletingStorage"]
+            }
+            
+            $storageResult = Remove-CursorStorage
+            $results.Storage = $storageResult.Success
+            $results.StorageMessage = $storageResult.Message
+            
+            # Mettre à jour le statut de l'interface utilisateur avec le message exact
+            if ($StatusLabel) {
+                $StatusLabel.Text = $storageResult.Message
+            }
+        }
+        
+        # 3. Réinitialisation du MachineGuid
+        if ($ShouldResetMachineGuid) {
+            if ($ProgressControl) { 
+                $ProgressControl.Value = 75
+                $StatusLabel.Text = $global:Translations[$global:CurrentLanguage]["ChangingMachineGuid"]
+            }
+            
+            $guidResult = Reset-MachineGuid
+            $results.MachineGuid = $guidResult.Success
+        }
+        
+        # Finalisation
+        if ($ProgressControl) { 
+            $ProgressControl.Value = 100
+            $StatusLabel.Text = $global:Translations[$global:CurrentLanguage]["Completed"]
+        }
+        
+        return @{
+            Success = $true
+            Results = $results
+            StorageMessage = $results.StorageMessage
+        }
+    }
+    catch {
+        Write-Host "❌ Erreur lors de l'exécution des actions: $_" -ForegroundColor Red
+        return @{
+            Success = $false
+            Error = $_
+            Results = $results
+            StorageMessage = $results.StorageMessage
+        }
+    }
+}
+
+# Fonction pour mettre à jour les informations réseau avec formatage spécifique
+function Update-NetworkInfo {
+    param (
+        [System.Windows.Forms.RichTextBox]$infoLabel = $macInfoLabel,
+        [System.Windows.Forms.RichTextBox]$guidLabel = $machineGuidLabel
+    )
+    
+    try {
+        # Récupérer les informations réseau via la fonction testée
+        $networkInfo = Get-NetworkInformation
+        
+        if ($networkInfo.Success) {
+            # Mise à jour du RichTextBox pour l'adaptateur et l'adresse MAC
+            $infoLabel.Clear()
+            $infoLabel.Text = "- $($global:Translations[$global:CurrentLanguage]['NetworkCard']) : "
+            $infoLabel.SelectionStart = $infoLabel.TextLength
+            $infoLabel.SelectionLength = 0
+            $infoLabel.SelectionColor = $global:ValueDisplayStyle['MacAddress']['TextColor']
+            $infoLabel.SelectionFont = New-Object System.Drawing.Font(
+                $global:ValueDisplayStyle['MacAddress']['FontFamily'],
+                $global:ValueDisplayStyle['MacAddress']['FontSize'],
+                $global:ValueDisplayStyle['MacAddress']['FontStyle']
+            )
+            # Utiliser le nom complet de l'adaptateur avec sa vitesse et sa version de pilote
+            $infoLabel.SelectedText = "$($networkInfo.Data.AdapterName)`n"
+            
+            # Ajouter l'adresse MAC avec le style approprié
+            $infoLabel.SelectionStart = $infoLabel.TextLength
+            $infoLabel.SelectionColor = [System.Drawing.Color]::FromArgb(200,200,200)
+            $infoLabel.SelectionFont = New-Object System.Drawing.Font("Segoe UI", 10)
+            $infoLabel.SelectedText = "- $($global:Translations[$global:CurrentLanguage]['MacAddress']) : "
+            
+            $infoLabel.SelectionStart = $infoLabel.TextLength
+            $infoLabel.SelectionColor = $global:ValueDisplayStyle['MacAddress']['TextColor']
+            $infoLabel.SelectionFont = New-Object System.Drawing.Font(
+                $global:ValueDisplayStyle['MacAddress']['FontFamily'],
+                $global:ValueDisplayStyle['MacAddress']['FontSize'],
+                $global:ValueDisplayStyle['MacAddress']['FontStyle']
+            )
+            $infoLabel.SelectedText = $networkInfo.Data.MacAddress
+
+            # Mettre à jour le MachineGuid
+            $guidLabel.Clear()
+            $guidLabel.Text = "- MachineGuid : "
+            $guidLabel.SelectionStart = $guidLabel.TextLength
+            $guidLabel.SelectionLength = 0
+            $guidLabel.SelectionColor = $global:ValueDisplayStyle['MachineGuid']['TextColor']
+            $guidLabel.SelectionFont = New-Object System.Drawing.Font(
+                $global:ValueDisplayStyle['MachineGuid']['FontFamily'],
+                $global:ValueDisplayStyle['MachineGuid']['FontSize'],
+                $global:ValueDisplayStyle['MachineGuid']['FontStyle']
+            )
+            $guidLabel.SelectedText = $networkInfo.Data.MachineGuid
+        } else {
+            $infoLabel.Text = $global:Translations[$global:CurrentLanguage][$networkInfo.Message]
+            $guidLabel.Text = ""
+        }
+    }
+    catch {
+        Write-Host "Erreur lors de la mise à jour des informations réseau : $_" -ForegroundColor Red
+        $infoLabel.Text = $global:Translations[$global:CurrentLanguage]["NetworkError"]
+        $guidLabel.Text = ""
+    }
+}
+
+# Renommer la fonction Update-ProgressBar locale pour éviter les conflits avec Step8_ProgressBar.ps1
+function Update-InterfaceProgressBar {
+    param (
+        [int]$step,
+        [int]$totalSteps = 4
+    )
+    
+    try {
+        Write-Host "🔄 Mise à jour de la barre de progression locale: $step/$totalSteps" -ForegroundColor Cyan
+        $progressValue = [Math]::Round(($step / $totalSteps) * 100)
+        
+        if ($script:progressBar -ne $null) {
+            $script:progressBar.Value = $progressValue
+            Write-Host "  ✓ ProgressBar.Value mis à jour: $progressValue" -ForegroundColor Green
+        } else {
+            Write-Host "  ❌ ProgressBar est null!" -ForegroundColor Red
+        }
+        
+        if ($script:statusLabel -ne $null) {
+            switch ($step) {
+                1 { $script:statusLabel.Text = $global:Translations[$global:CurrentLanguage]["ChangingMAC"] }
+                2 { $script:statusLabel.Text = $global:Translations[$global:CurrentLanguage]["ChangingMachineGuid"] }
+                3 { $script:statusLabel.Text = $global:Translations[$global:CurrentLanguage]["DeletingStorage"] }
+                4 { 
+                    $script:statusLabel.Text = $global:Translations[$global:CurrentLanguage]["Completed"]
+                    if ($script:progressBar -ne $null) { 
+                        $script:progressBar.Value = 100 
+                    }
+                }
+                default { $script:statusLabel.Text = $global:Translations[$global:CurrentLanguage]["Ready"] }
+            }
+            Write-Host "  ✓ StatusLabel.Text mis à jour: $($script:statusLabel.Text)" -ForegroundColor Green
+        } else {
+            Write-Host "  ❌ StatusLabel est null!" -ForegroundColor Red
+        }
+    }
+    catch {
+        Write-Host "❌ Erreur lors de la mise à jour de la barre de progression : $_" -ForegroundColor Red
+    }
+}
+
+# Fonction pour afficher le résumé des actions
+function Show-ActionSummary {
+    param (
+        [bool]$MacSuccess,
+        [bool]$StorageSuccess,
+        [bool]$MachineGuidSuccess,
+        [string]$StorageMessage,
+        [System.Windows.Forms.Form]$Owner = $null
+    )
+    
+    # Créer un formulaire personnalisé pour le résumé
+    $formSummary = New-Object System.Windows.Forms.Form
+    $formSummary.Text = "Résumé des actions"
+    if ($global:Translations -and $global:CurrentLanguage -and $global:Translations[$global:CurrentLanguage]["ActionSummaryTitle"]) {
+        $formSummary.Text = $global:Translations[$global:CurrentLanguage]["ActionSummaryTitle"]
+    }
+    
+    $formSummary.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon((Get-Process -Id $pid).Path)
+    $formSummary.Size = New-Object System.Drawing.Size(450, 350)
+    $formSummary.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
+    $formSummary.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedDialog
+    $formSummary.MaximizeBox = $false
+    $formSummary.MinimizeBox = $false
+    $formSummary.BackColor = [System.Drawing.Color]::FromArgb(30,30,30)
+    $formSummary.ForeColor = [System.Drawing.Color]::White
+    
+    # Définir le propriétaire de la fenêtre pour qu'elle reste au-dessus
+    if ($Owner -ne $null) {
+        $formSummary.Owner = $Owner
+        # Centrer par rapport au propriétaire
+        $formSummary.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterParent
+    }
+    
+    # S'assurer que la fenêtre reste au-dessus de toutes les autres
+    $formSummary.TopMost = $true
+    
+    # Éviter que la fenêtre n'apparaisse dans la barre des tâches
+    $formSummary.ShowInTaskbar = $false
+    
+    # Créer un titre pour le formulaire
+    $lblTitle = New-Object System.Windows.Forms.Label
+    $lblTitle.Text = "Résumé des actions"
+    if ($global:Translations -and $global:CurrentLanguage -and $global:Translations[$global:CurrentLanguage]["ActionSummaryHeader"]) {
+        $lblTitle.Text = $global:Translations[$global:CurrentLanguage]["ActionSummaryHeader"]
+    }
+    
+    $lblTitle.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
+    $lblTitle.ForeColor = [System.Drawing.Color]::White
+    $lblTitle.Location = New-Object System.Drawing.Point(20, 20)
+    $lblTitle.Size = New-Object System.Drawing.Size(410, 30)
+    $lblTitle.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+    $formSummary.Controls.Add($lblTitle)
+    
+    # Créer des labels pour chaque action
+    $lblMAC = New-Object System.Windows.Forms.Label
+    $lblMAC.Text = "MAC Address: " + $(if ($MacSuccess) { "✅" } else { "❌" })
+    $lblMAC.ForeColor = [System.Drawing.Color]::White
+    $lblMAC.Location = New-Object System.Drawing.Point(20, 70)
+    $lblMAC.Size = New-Object System.Drawing.Size(410, 20)
+    $formSummary.Controls.Add($lblMAC)
+    
+    $lblStorage = New-Object System.Windows.Forms.Label
+    # Utiliser le message spécifique retourné par Remove-CursorStorage
+    $lblStorage.Text = "Storage: " + $(if ($StorageSuccess) { "✅ " + $StorageMessage } else { "❌ " + $StorageMessage })
+    $lblStorage.ForeColor = [System.Drawing.Color]::White
+    $lblStorage.Location = New-Object System.Drawing.Point(20, 100)
+    $lblStorage.Size = New-Object System.Drawing.Size(410, 20)
+    $formSummary.Controls.Add($lblStorage)
+    
+    $lblMachineGuid = New-Object System.Windows.Forms.Label
+    $lblMachineGuid.Text = "Machine GUID: " + $(if ($MachineGuidSuccess) { "✅" } else { "❌" })
+    $lblMachineGuid.ForeColor = [System.Drawing.Color]::White
+    $lblMachineGuid.Location = New-Object System.Drawing.Point(20, 130)
+    $lblMachineGuid.Size = New-Object System.Drawing.Size(410, 20)
+    $formSummary.Controls.Add($lblMachineGuid)
+    
+    # Ajouter un message global sur le résultat
+    $lblOverall = New-Object System.Windows.Forms.Label
+    if ($MacSuccess -and $StorageSuccess -and $MachineGuidSuccess) {
+        $lblOverall.Text = "Toutes les actions ont été exécutées avec succès!"
+        if ($global:Translations -and $global:CurrentLanguage -and $global:Translations[$global:CurrentLanguage]["AllActionsSuccessful"]) {
+            $lblOverall.Text = $global:Translations[$global:CurrentLanguage]["AllActionsSuccessful"]
+        }
+        $lblOverall.ForeColor = [System.Drawing.Color]::Green
+    } else {
+        $lblOverall.Text = "Certaines actions ont échoué."
+        if ($global:Translations -and $global:CurrentLanguage -and $global:Translations[$global:CurrentLanguage]["SomeActionsFailed"]) {
+            $lblOverall.Text = $global:Translations[$global:CurrentLanguage]["SomeActionsFailed"]
+        }
+        $lblOverall.ForeColor = [System.Drawing.Color]::Red
+    }
+    $lblOverall.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Bold)
+    $lblOverall.Location = New-Object System.Drawing.Point(20, 170)
+    $lblOverall.Size = New-Object System.Drawing.Size(410, 20)
+    $lblOverall.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+    $formSummary.Controls.Add($lblOverall)
+    
+    # Ajouter un message pour l'inscription
+    $lblInscription = New-Object System.Windows.Forms.Label
+    $lblInscription.Text = "Veuillez procéder à votre nouvelle inscription sur cursor.com"
+    if ($global:Translations -and $global:CurrentLanguage -and $global:Translations[$global:CurrentLanguage]["RegistrationPrompt"]) {
+        $lblInscription.Text = $global:Translations[$global:CurrentLanguage]["RegistrationPrompt"]
+    }
+    $lblInscription.ForeColor = [System.Drawing.Color]::White
+    $lblInscription.Location = New-Object System.Drawing.Point(20, 200)
+    $lblInscription.Size = New-Object System.Drawing.Size(410, 20)
+    $lblInscription.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+    $formSummary.Controls.Add($lblInscription)
+    
+    # Ajouter un bouton pour aller sur cursor.com
+    $btnCursor = New-Object System.Windows.Forms.Button
+    $btnCursor.Text = "Aller sur cursor.com"
+    if ($global:Translations -and $global:CurrentLanguage -and $global:Translations[$global:CurrentLanguage]["GoToCursor"]) {
+        $btnCursor.Text = $global:Translations[$global:CurrentLanguage]["GoToCursor"]
+    }
+    $btnCursor.Location = New-Object System.Drawing.Point(125, 240)
+    $btnCursor.Size = New-Object System.Drawing.Size(200, 30)
+    $btnCursor.BackColor = [System.Drawing.Color]::FromArgb(255,140,0)
+    $btnCursor.ForeColor = [System.Drawing.Color]::White
+    $btnCursor.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    $btnCursor.FlatAppearance.BorderSize = 1
+    $btnCursor.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255,140,0)
+    $btnCursor.Cursor = [System.Windows.Forms.Cursors]::Hand
+    $btnCursor.Add_Click({ Start-Process "https://cursor.com" })
+    $formSummary.Controls.Add($btnCursor)
+    
+    # Afficher le formulaire de façon modale
+    $formSummary.ShowDialog() | Out-Null
 }
 
 function global:Initialize-MainWindow {
@@ -121,7 +519,7 @@ function global:Initialize-MainWindow {
         # Section fenêtre principale
         $mainForm = New-Object System.Windows.Forms.Form
         $mainForm.Text = $global:Translations[$global:CurrentLanguage]["WindowTitle"]
-        $mainForm.Size = New-Object System.Drawing.Size(700,550) 
+        $mainForm.Size = New-Object System.Drawing.Size(700,650) 
         $mainForm.StartPosition = "CenterScreen"
         $mainForm.BackColor = [System.Drawing.Color]::FromArgb(30,30,30)
         $mainForm.ForeColor = [System.Drawing.Color]::White
@@ -143,7 +541,7 @@ function global:Initialize-MainWindow {
 
         # Section panneau principal
         $mainPanel = New-Object System.Windows.Forms.Panel
-        $mainPanel.Size = New-Object System.Drawing.Size(680,550)
+        $mainPanel.Size = New-Object System.Drawing.Size(680,670)
         $mainPanel.Location = New-Object System.Drawing.Point(10,10)
         $mainPanel.BackColor = [System.Drawing.Color]::FromArgb(30,30,30)
         $mainForm.Controls.Add($mainPanel)
@@ -158,7 +556,7 @@ function global:Initialize-MainWindow {
         $buttonWidth = 600
         $buttonHeight = 35
         $buttonX = [int](($mainPanel.Width - $buttonWidth) / 2)
-        $buttonStartY = 250  # Position après le panneau MAC
+        $buttonStartY = 300  # Nouvelle position après le panneau MAC
         $buttonSpacing = 45  # Espacement entre les boutons
 
         # Section fabrique de boutons
@@ -277,7 +675,7 @@ function global:Initialize-MainWindow {
         $mainPanel.Controls.Add($freeTitleLabel)
 
         
-        # Sous-titre ligne (Débloquer 👻 Cursor)
+        # Sous-titre ligne (Renouveler 👻 Cursor)
         $subtitleLabel1 = New-Object System.Windows.Forms.Label
         $subtitleLabel1.Text = $global:Translations[$global:CurrentLanguage]["Subtitle"]
         $subtitleLabel1.Font = New-Object System.Drawing.Font("Segoe UI Light", 20)
@@ -290,12 +688,12 @@ function global:Initialize-MainWindow {
 
 
         $iconTitleLabel = New-Object System.Windows.Forms.Label
-        $iconTitleLabel.Text = $global:Translations[$global:CurrentLanguage]["iconTitle"]
-        $iconTitleLabel.Font = New-Object System.Drawing.Font("Segoe UI Light", 20)
-        $iconTitleLabel.ForeColor = [System.Drawing.Color]::FromArgb(255,140,0)  # Orange
+        $iconTitleLabel.Text = [System.Text.Encoding]::UTF8.GetString([System.Text.Encoding]::UTF8.GetBytes("👻"))
+        $iconTitleLabel.Font = New-Object System.Drawing.Font("Segoe UI Emoji", 25)
+        $iconTitleLabel.ForeColor = [System.Drawing.Color]::FromArgb(255,140,0)
         $iconTitleLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
-        $iconTitleLabel.Size = New-Object System.Drawing.Size(50,40)
-        $iconTitleLabel.Location = New-Object System.Drawing.Point(320,100)
+        $iconTitleLabel.Size = New-Object System.Drawing.Size(50,50)
+        $iconTitleLabel.Location = New-Object System.Drawing.Point(320,110)
         $iconTitleLabel.Tag = "iconTitleLabel"
         $mainPanel.Controls.Add($iconTitleLabel)
 
@@ -313,77 +711,145 @@ function global:Initialize-MainWindow {
 
         # Panneau MAC
         $macInfoPanel = New-Object System.Windows.Forms.Panel
-        $macInfoPanel.Location = New-Object System.Drawing.Point(90,150)
-        $macInfoPanel.Size = New-Object System.Drawing.Size(500,80)
+        $macInfoPanel.Location = New-Object System.Drawing.Point(40, 175)
+        $macInfoPanel.Size = New-Object System.Drawing.Size(600, 100)
         $macInfoPanel.BackColor = [System.Drawing.Color]::FromArgb(45,45,45)
         $mainPanel.Controls.Add($macInfoPanel)
 
 
         # Label MAC
-        $macInfoLabel = New-Object System.Windows.Forms.Label
-        $macInfoLabel.Location = New-Object System.Drawing.Point(10,10)
-        $macInfoLabel.Size = New-Object System.Drawing.Size(480,60)
+        $macInfoLabel = New-Object System.Windows.Forms.RichTextBox
+        $macInfoLabel.Location = New-Object System.Drawing.Point(10, 10)
+        $macInfoLabel.Size = New-Object System.Drawing.Size(530, 50)
         $macInfoLabel.Font = New-Object System.Drawing.Font("Segoe UI", 10)
         $macInfoLabel.ForeColor = [System.Drawing.Color]::FromArgb(200,200,200)
-        $macInfoLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+        $macInfoLabel.BackColor = [System.Drawing.Color]::FromArgb(45,45,45)
+        $macInfoLabel.BorderStyle = [System.Windows.Forms.BorderStyle]::None
+        $macInfoLabel.ReadOnly = $true
+        $macInfoLabel.Multiline = $true
         $macInfoPanel.Controls.Add($macInfoLabel)
-        $macInfoLabel.BringToFront()
+
+        # Label MachineGuid
+        $machineGuidLabel = New-Object System.Windows.Forms.RichTextBox
+        $machineGuidLabel.Location = New-Object System.Drawing.Point(10, 60)
+        $machineGuidLabel.Size = New-Object System.Drawing.Size(480, 50)
+        $machineGuidLabel.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+        $machineGuidLabel.ForeColor = [System.Drawing.Color]::FromArgb(200,200,200)
+        $machineGuidLabel.BackColor = [System.Drawing.Color]::FromArgb(45,45,45)
+        $machineGuidLabel.BorderStyle = [System.Windows.Forms.BorderStyle]::None
+        $machineGuidLabel.ReadOnly = $true
+        $machineGuidLabel.Multiline = $true
+        $macInfoPanel.Controls.Add($machineGuidLabel)
+
+        # Initialisation des informations réseau avec les valeurs actuelles
+        try {
+            $currentAdapter = Get-NetworkAdapters | Select-Object -First 1
+            $currentGuid = Get-MachineGuid
+            
+            if ($currentAdapter) {
+                $macInfoLabel.Clear()
+                $macInfoLabel.Text = "- $($global:Translations[$global:CurrentLanguage]['NetworkCard']) : "
+                $macInfoLabel.SelectionStart = $macInfoLabel.TextLength
+                $macInfoLabel.SelectionLength = 0
+                $macInfoLabel.SelectionColor = $global:ValueDisplayStyle['MacAddress']['TextColor']
+                $macInfoLabel.SelectionFont = New-Object System.Drawing.Font(
+                    $global:ValueDisplayStyle['MacAddress']['FontFamily'],
+                    $global:ValueDisplayStyle['MacAddress']['FontSize'],
+                    $global:ValueDisplayStyle['MacAddress']['FontStyle']
+                )
+                $macInfoLabel.SelectedText = "$(Format-NetworkAdapter $currentAdapter)`n"
+                
+                $macInfoLabel.SelectionStart = $macInfoLabel.TextLength
+                $macInfoLabel.SelectionColor = [System.Drawing.Color]::FromArgb(200,200,200)
+                $macInfoLabel.SelectionFont = New-Object System.Drawing.Font("Segoe UI", 10)
+                $macInfoLabel.SelectedText = "- $($global:Translations[$global:CurrentLanguage]['MacAddress']) : "
+                
+                $macInfoLabel.SelectionStart = $macInfoLabel.TextLength
+                $macInfoLabel.SelectionColor = $global:ValueDisplayStyle['MacAddress']['TextColor']
+                $macInfoLabel.SelectionFont = New-Object System.Drawing.Font(
+                    $global:ValueDisplayStyle['MacAddress']['FontFamily'],
+                    $global:ValueDisplayStyle['MacAddress']['FontSize'],
+                    $global:ValueDisplayStyle['MacAddress']['FontStyle']
+                )
+                $macInfoLabel.SelectedText = $currentAdapter.MacAddress
+            }
+            
+            if ($currentGuid) {
+                $machineGuidLabel.Clear()
+                $machineGuidLabel.Text = "- MachineGuid : "
+                $machineGuidLabel.SelectionStart = $machineGuidLabel.TextLength
+                $machineGuidLabel.SelectionLength = 0
+                $machineGuidLabel.SelectionColor = $global:ValueDisplayStyle['MachineGuid']['TextColor']
+                $machineGuidLabel.SelectionFont = New-Object System.Drawing.Font(
+                    $global:ValueDisplayStyle['MachineGuid']['FontFamily'],
+                    $global:ValueDisplayStyle['MachineGuid']['FontSize'],
+                    $global:ValueDisplayStyle['MachineGuid']['FontStyle']
+                )
+                $machineGuidLabel.SelectedText = $currentGuid
+            }
+        }
+        catch {
+            Write-Host "❌ Erreur lors de l'initialisation des informations : $_" -ForegroundColor Red
+        }
 
         # Boutons principaux
         $btnMacAddress = Create-StyledButton -text $global:Translations[$global:CurrentLanguage]["BtnMacAddress"] -y $buttonStartY -fontFamily "consolas"
         $btnMacAddress.Tag = "btnMacAddress"
         $btnDeleteStorage = Create-StyledButton -text $global:Translations[$global:CurrentLanguage]["BtnDeleteStorage"] -y ($buttonStartY + $buttonSpacing) -fontFamily "consolas"
         $btnDeleteStorage.Tag = "btnDeleteStorage"
-        $btnExecuteAll = Create-StyledButton -text $global:Translations[$global:CurrentLanguage]["BtnExecuteAll"] -y ($buttonStartY + $buttonSpacing * 2) -customBackColor ([System.Drawing.Color]::FromArgb(255,140,0)) -fontFamily "consolas"
+        $btnMachineGuid = Create-StyledButton -text $global:Translations[$global:CurrentLanguage]["BtnMachineGuid"] -y ($buttonStartY + $buttonSpacing * 2) -fontFamily "consolas"
+        $btnMachineGuid.Tag = "btnMachineGuid"
+        $btnExecuteAll = Create-StyledButton -text $global:Translations[$global:CurrentLanguage]["BtnExecuteAll"] -y ($buttonStartY + $buttonSpacing * 3) -fontFamily "consolas"
         $btnExecuteAll.Tag = "btnExecuteAll"
-        $btnExit = Create-StyledButton -text $global:Translations[$global:CurrentLanguage]["BtnExit"] -y ($buttonStartY + $buttonSpacing * 3) -customBackColor ([System.Drawing.Color]::FromArgb(185,45,45)) -fontFamily "consolas"
+        $btnExit = Create-StyledButton -text $global:Translations[$global:CurrentLanguage]["BtnExit"] -y ($buttonStartY + $buttonSpacing * 4) -customBackColor ([System.Drawing.Color]::FromArgb(255,140,0)) -fontFamily "consolas"
         $btnExit.Tag = "btnExit"
 
         # Barre de progression
-        $progressBar = New-Object System.Windows.Forms.ProgressBar
-        $progressBar.Location = New-Object System.Drawing.Point($buttonX, ($buttonStartY + $buttonSpacing * 4))
-        $progressBar.Size = New-Object System.Drawing.Size($buttonWidth, 10)  # Plus fine
-        $progressBar.Style = 'Continuous'
-        $progressBar.Value = 0
-        $progressBar.BackColor = [System.Drawing.Color]::FromArgb(20,20,20)  # Fond sombre
-        $progressBar.ForeColor = [System.Drawing.Color]::FromArgb(255,140,0)  # Orange
-        $progressBar.MarqueeAnimationSpeed = 30
-        $progressBar.Visible = $true
-        $mainPanel.Controls.Add($progressBar)
-        $mainPanel.Controls.Add($progressBar)
+        $script:progressBar = New-Object System.Windows.Forms.ProgressBar
+        $script:progressBar.Location = New-Object System.Drawing.Point($buttonX, ($buttonStartY + $buttonSpacing * 5))
+        $script:progressBar.Size = New-Object System.Drawing.Size($buttonWidth, 20)
+        $script:progressBar.Style = 'Continuous'
+        $script:progressBar.Value = 0
+        $script:progressBar.BackColor = [System.Drawing.Color]::FromArgb(20,20,20)
+        $script:progressBar.ForeColor = [System.Drawing.Color]::FromArgb(0,120,215)  # Bleu standard Windows
+        $script:progressBar.Visible = $true
+        $mainPanel.Controls.Add($script:progressBar)
 
         # Label de statut
-        $statusLabel = New-Object System.Windows.Forms.Label
-        $statusLabel.Location = New-Object System.Drawing.Point($buttonX, ($buttonStartY + $buttonSpacing * 4 + 20))
-        $statusLabel.Size = New-Object System.Drawing.Size($buttonWidth, 40)
-        $statusLabel.Font = New-Object System.Drawing.Font("Segoe UI", 11)  # Plus grand
-        $statusLabel.ForeColor = [System.Drawing.Color]::FromArgb(255,140,0)  # Orange
-        $statusLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
-        $statusLabel.Text = $global:Translations[$global:CurrentLanguage]["Ready"]
-        $mainPanel.Controls.Add($statusLabel)
-        $mainPanel.Controls.Add($statusLabel)
+        $script:statusLabel = New-Object System.Windows.Forms.Label
+        $script:statusLabel.Location = New-Object System.Drawing.Point($buttonX, ($buttonStartY + $buttonSpacing * 5))
+        $script:statusLabel.Size = New-Object System.Drawing.Size($buttonWidth, 20)
+        $script:statusLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+        $script:statusLabel.ForeColor = [System.Drawing.Color]::White
+        $script:statusLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
+        $script:statusLabel.BackColor = [System.Drawing.Color]::Transparent
+        $script:statusLabel.Text = $global:Translations[$global:CurrentLanguage]["Ready"]
+        $mainPanel.Controls.Add($script:statusLabel)
 
         # Nettoyer les contrôles existants
         $mainPanel.Controls.Clear()
 
-        # Ajouter les contrôles dans l'ordre (du fond vers l'avant)
+        # 1. Ajouter les contrôles dans l'ordre (du fond vers l'avant)
         # Panneau MAC (fond)
         $mainPanel.Controls.Add($macInfoPanel)
+        $macInfoPanel.Controls.Add($macInfoLabel)
+        $macInfoPanel.Controls.Add($machineGuidLabel)
 
-        # Bouton de langue (premier plan)
-        $mainPanel.Controls.Add($btnLang)
-
-        # Boutons principaux
+        # 2. Boutons principaux
         $mainPanel.Controls.Add($btnMacAddress)
         $mainPanel.Controls.Add($btnDeleteStorage)
+        $mainPanel.Controls.Add($btnMachineGuid)
         $mainPanel.Controls.Add($btnExecuteAll)
         $mainPanel.Controls.Add($btnExit)
 
-        # Barre de progression et statut
-        $mainPanel.Controls.Add($progressBar)
-        $mainPanel.Controls.Add($statusLabel)
+        # 3. Barre de progression et statut
+        $mainPanel.Controls.Add($script:progressBar)
+        $mainPanel.Controls.Add($script:statusLabel)
 
-        # Titres et sous-titres
+        # 4. Bouton de langue (premier plan)
+        $mainPanel.Controls.Add($btnLang)
+
+        # 5. Titres et sous-titres (dernier plan pour être au-dessus)
         $mainPanel.Controls.Add($freeTitleLabel)
         $mainPanel.Controls.Add($subtitleLabel2)       
         $mainPanel.Controls.Add($iconTitleLabel)     
@@ -391,15 +857,8 @@ function global:Initialize-MainWindow {
         $mainPanel.Controls.Add($titleLabel)
         $mainPanel.Controls.Add($subtitleLabel1)
 
-        
-
-        # Réactiver le layout
-        $mainPanel.ResumeLayout($true)
-
-        # ===== Magasin des événements =====
-        Write-Host "`n🏪 Configuration des événements..." -ForegroundColor Cyan
-        
-        # Section événements de sortie
+        # 6. Réassigner tous les gestionnaires d'événements après l'ajout des contrôles
+        # Événement de fermeture
         $btnExit.Add_Click({
             try {
                 Write-Host "Fermeture de l'application..." -ForegroundColor Yellow
@@ -415,38 +874,151 @@ function global:Initialize-MainWindow {
             }
         })
 
-        # Section événements MAC
+        # Événement MAC Address
         $btnMacAddress.Add_Click({
             try {
-                Write-Host "🔄 Chargement de l'interface MAC..." -ForegroundColor Gray
+                Write-Host "🖱️ Clic sur Modifier l'adresse MAC" -ForegroundColor Cyan
                 
-                # Récupérer le label de statut depuis le formulaire
+                # Désactiver le bouton pendant le traitement
+                $this.Enabled = $false
+                
+                # Réinitialiser la barre de progression manuellement
+                if ($script:progressBar -ne $null) {
+                    $script:progressBar.Value = 0
+                    Write-Host "  ✓ ProgressBar réinitialisée" -ForegroundColor Green
+                }
+                
+                if ($script:statusLabel -ne $null) {
+                    $script:statusLabel.Text = $global:Translations[$global:CurrentLanguage]["Initializing"]
+                    Write-Host "  ✓ StatusLabel mis à jour: Initialisation" -ForegroundColor Green
+                }
+                
+                # Récupérer le panneau MAC et ses contrôles
                 $form = $this.FindForm()
-                $statusLabel = $form.Controls[0].Controls | Where-Object { $_ -is [System.Windows.Forms.Label] -and $_.Font.Size -eq 11 }
+                $macPanel = $null
+                if ($form -ne $null) {
+                    $macPanel = $form.Controls[0].Controls | Where-Object { $_ -is [System.Windows.Forms.Panel] -and $_.BackColor.R -eq 45 }
+                    Write-Host "  ✓ Référence au panneau MAC trouvée" -ForegroundColor Green
+                } else {
+                    Write-Host "  ❌ Formulaire parent non trouvé!" -ForegroundColor Red
+                }
                 
-                if ($statusLabel) {
-                    $statusLabel.Text = $global:Translations[$global:CurrentLanguage]["BtnMacAddress"]
+                $macInfoLabelObj = $null
+                $machineGuidLabelObj = $null
+                
+                if ($macPanel) {
+                    $macInfoLabelObj = $macPanel.Controls | Where-Object { $_ -is [System.Windows.Forms.RichTextBox] -and $_.Location.Y -eq 10 }
+                    $machineGuidLabelObj = $macPanel.Controls | Where-Object { $_ -is [System.Windows.Forms.RichTextBox] -and $_.Location.Y -eq 60 }
+                    
+                    if ($macInfoLabelObj) { Write-Host "  ✓ Label MAC trouvé" -ForegroundColor Green }
+                    if ($machineGuidLabelObj) { Write-Host "  ✓ Label GUID trouvé" -ForegroundColor Green }
+                }
                     
                     # Charger et exécuter le script MAC
-                    . "$PSScriptRoot\Step4_MacAddress.ps1"
+                $step4Path = Join-Path -Path $PSScriptRoot -ChildPath "Step4_MacAddress.ps1"
+                if (Test-Path $step4Path) {
+                    . $step4Path
+                    Write-Host "✅ Script MAC chargé avec succès" -ForegroundColor Green
+                    
+                    # Mise à jour de la barre de progression - 25%
+                    if ($script:progressBar -ne $null) {
+                        $script:progressBar.Value = 25
+                    }
+                    if ($script:statusLabel -ne $null) {
+                        $script:statusLabel.Text = $global:Translations[$global:CurrentLanguage]["LoadingMacScript"]
+                    }
+                    
                     $adapter = Get-NetworkAdapters | Select-Object -First 1
                     if ($adapter) {
+                        Write-Host "  ✓ Adaptateur réseau trouvé: $($adapter.Name)" -ForegroundColor Green
+                        
+                        # Mise à jour de la barre de progression - 50%
+                        if ($script:progressBar -ne $null) {
+                            $script:progressBar.Value = 50
+                        }
+                        if ($script:statusLabel -ne $null) {
+                            $script:statusLabel.Text = $global:Translations[$global:CurrentLanguage]["GeneratingMacAddress"]
+                        }
+                        
                         $newMac = New-MacAddress
                         if ($newMac) {
+                            Write-Host "  ✓ Nouvelle adresse MAC générée: $newMac" -ForegroundColor Green
+                            
+                            # Mise à jour de la barre de progression - 75%
+                            if ($script:progressBar -ne $null) {
+                                $script:progressBar.Value = 75
+                            }
+                            if ($script:statusLabel -ne $null) {
+                                $script:statusLabel.Text = $global:Translations[$global:CurrentLanguage]["ApplyingMacAddress"]
+                            }
+                            
                             $result = Set-MacAddress -AdapterName $adapter.Name -MacAddress $newMac
                             if ($result) {
+                                Write-Host "  ✓ Adresse MAC modifiée avec succès" -ForegroundColor Green
+                                
+                                # Mise à jour de la barre de progression - 100%
+                                if ($script:progressBar -ne $null) {
+                                    $script:progressBar.Value = 100
+                                }
+                                if ($script:statusLabel -ne $null) {
+                                    $script:statusLabel.Text = $global:Translations[$global:CurrentLanguage]["MacAddressModified"]
+                                }
+                                
                                 [System.Windows.Forms.MessageBox]::Show(
                                     $global:Translations[$global:CurrentLanguage]["MacSuccessMsg"],
                                     $global:Translations[$global:CurrentLanguage]["SuccessTitle"],
                                     [System.Windows.Forms.MessageBoxButtons]::OK,
                                     [System.Windows.Forms.MessageBoxIcon]::Information
                                 )
+                                
+                                # Attendre que la carte réseau soit de nouveau disponible
+                                if ($script:statusLabel -ne $null) {
+                                    $script:statusLabel.Text = $global:Translations[$global:CurrentLanguage]["WaitingForNetwork"]
+                                }
+                                
+                                # Attendre que la carte redémarre
+                                Write-Host "  ⏱️ Attente du redémarrage de la carte réseau (10 secondes)..." -ForegroundColor Yellow
+                                Start-Sleep -Seconds 10
+                                
+                                # Réessayer plusieurs fois
+                                $maxRetries = 5
+                                $retryCount = 0
+                                $updateSuccess = $false
+                                
+                                while ($retryCount -lt $maxRetries -and -not $updateSuccess) {
+                                    Write-Host "  🔄 Tentative de mise à jour des informations réseau ($($retryCount + 1)/$maxRetries)..." -ForegroundColor Gray
+                                    try {
+                                        # Mettre à jour les informations réseau après la modification
+                                        if ($macInfoLabelObj -and $machineGuidLabelObj) {
+                                            Update-NetworkInfo -infoLabel $macInfoLabelObj -guidLabel $machineGuidLabelObj
+                                            $updateSuccess = $true
+                                            Write-Host "  ✓ Informations réseau mises à jour avec succès" -ForegroundColor Green
+                                        }
+                                    } catch {
+                                        Write-Host "  ⚠️ Échec de la mise à jour, nouvel essai dans 3 secondes... ($_)" -ForegroundColor Yellow
+                                        Start-Sleep -Seconds 3
+                                    }
+                                    $retryCount++
+                                }
+                            } else {
+                                Write-Host "  ❌ Échec de la modification de l'adresse MAC" -ForegroundColor Red
                             }
+                        } else {
+                            Write-Host "❌ Aucun adaptateur réseau trouvé" -ForegroundColor Red
                         }
+                    } else {
+                        Write-Host "❌ Script MAC non trouvé: $step4Path" -ForegroundColor Red
+                        throw "Script MAC non trouvé: $step4Path"
                     }
-                    
-                    Start-Sleep -Seconds 1
-                    $statusLabel.Text = $global:Translations[$global:CurrentLanguage]["Ready"]
+                }
+                
+                # Restaurer après quelques secondes
+                Start-Sleep -Seconds 2
+                if ($script:progressBar -ne $null) {
+                    $script:progressBar.Value = 0
+                }
+                if ($script:statusLabel -ne $null) {
+                    $script:statusLabel.Text = $global:Translations[$global:CurrentLanguage]["Ready"]
                 }
             }
             catch {
@@ -458,22 +1030,27 @@ function global:Initialize-MainWindow {
                     [System.Windows.Forms.MessageBoxIcon]::Error
                 )
             }
+            finally {
+                # Réactiver le bouton
+                $this.Enabled = $true
+            }
         })
 
-        # Section événements Storage
+        # Événement Delete Storage
         $btnDeleteStorage.Add_Click({
             try {
                 Write-Host "🔄 Suppression du fichier storage.json..." -ForegroundColor Gray
                 
-                # Récupérer les contrôles depuis le formulaire
-                $form = $this.FindForm()
-                $statusLabel = $form.Controls[0].Controls | Where-Object { $_ -is [System.Windows.Forms.Label] -and $_.Font.Size -eq 11 }
+                # Réinitialiser la barre de progression
+                if ($script:progressBar -ne $null -and $script:statusLabel -ne $null) {
+                    Reset-ProgressBar -ProgressBar $script:progressBar -MessageLabel $script:statusLabel -PercentLabel $null
+                }
                 
-                if ($statusLabel) {
-                    $statusLabel.Text = $global:Translations[$global:CurrentLanguage]["BtnDeleteStorage"]
+                # Mettre à jour le statut et initialiser la barre de progression
+                Update-StepProgress -Step "Initialization" -ProgressBar $script:progressBar -MessageLabel $script:statusLabel -PercentLabel $null
                     
                     # Déterminer le chemin du script
-                    $scriptPath = Join-Path $PSScriptRoot "Step5_FileManager.ps1"
+                $scriptPath = Join-Path -Path $PSScriptRoot -ChildPath "Step5_FileManager.ps1"
                     Write-Host "PSScriptRoot: $PSScriptRoot" -ForegroundColor Gray
                     Write-Host "Chemin complet du script: $scriptPath" -ForegroundColor Gray
                     
@@ -483,30 +1060,40 @@ function global:Initialize-MainWindow {
                         . $scriptPath
                         Write-Host "Script chargé avec succès" -ForegroundColor Green
                         
-                        $result = Remove-CursorStorage
-                
-                if ($result.Success) {
+                    # Mise à jour de la barre de progression - Storage (50-75%)
+                    Update-StepProgress -Step "Storage" -ProgressBar $script:progressBar -MessageLabel $script:statusLabel -PercentLabel $null
+                    
+                    # Appeler Remove-CursorStorage dans tous les cas
+                    $storageResult = Remove-CursorStorage
+                    
+                    # Toujours considérer comme un succès, qu'il s'agisse d'un fichier supprimé ou qui n'existe pas déjà
+                    # Et utiliser le message exact retourné par Remove-CursorStorage
+                    Update-ProgressBar -Progress 100 -Message $storageResult.Message -ProgressBar $script:progressBar -MessageLabel $script:statusLabel -PercentLabel $null
+                    
+                    # Le message et le titre dépendent du résultat de l'opération
+                    $icon = [System.Windows.Forms.MessageBoxIcon]::Information
+                    $title = $global:Translations[$global:CurrentLanguage]["SuccessTitle"]
+                    
+                    if (-not $storageResult.Success) {
+                        $icon = [System.Windows.Forms.MessageBoxIcon]::Error
+                        $title = $global:Translations[$global:CurrentLanguage]["ErrorTitle"]
+                    }
+                    
                     [System.Windows.Forms.MessageBox]::Show(
-                                $global:Translations[$global:CurrentLanguage]["StorageSuccessMsg"],
-                                $global:Translations[$global:CurrentLanguage]["SuccessTitle"],
+                        $storageResult.Message,
+                        $title,
                         [System.Windows.Forms.MessageBoxButtons]::OK,
-                        [System.Windows.Forms.MessageBoxIcon]::Information
+                        $icon
                     )
-                } else {
-                    [System.Windows.Forms.MessageBox]::Show(
-                        $result.Message,
-                                $global:Translations[$global:CurrentLanguage]["InfoTitle"],
-                        [System.Windows.Forms.MessageBoxButtons]::OK,
-                        [System.Windows.Forms.MessageBoxIcon]::Information
-                    )
-                        }
                     } else {
                         Write-Host "❌ Le fichier n'existe pas à l'emplacement: $scriptPath" -ForegroundColor Red
                         throw "Le fichier Step5_FileManager.ps1 n'existe pas à l'emplacement: $scriptPath"
                     }
                     
-                    Start-Sleep -Seconds 1
-                    $statusLabel.Text = $global:Translations[$global:CurrentLanguage]["Ready"]
+                # Restaurer le texte du label de statut après quelques secondes
+                Start-Sleep -Seconds 2
+                if ($script:progressBar -ne $null -and $script:statusLabel -ne $null) {
+                    Reset-ProgressBar -ProgressBar $script:progressBar -MessageLabel $script:statusLabel -PercentLabel $null
                 }
             }
             catch {
@@ -520,174 +1107,206 @@ function global:Initialize-MainWindow {
             }
         })
 
-        # Section événements Execute All
+        # Événement Execute All
         $btnExecuteAll.Add_Click({
+            # Désactiver le bouton actuel pendant l'exécution
+            $this.Enabled = $false
+            
             try {
-                # Récupérer les contrôles depuis le formulaire
+                # Récupérer la référence au formulaire et aux contrôles
                 $form = $this.FindForm()
-                $statusLabel = $form.Controls[0].Controls | Where-Object { $_ -is [System.Windows.Forms.Label] -and $_.Font.Size -eq 11 }
-                $progressBar = $form.Controls[0].Controls | Where-Object { $_ -is [System.Windows.Forms.ProgressBar] }
+                $macPanel = $form.Controls[0].Controls | Where-Object { $_ -is [System.Windows.Forms.Panel] -and $_.BackColor.R -eq 45 }
                 
-                if ($statusLabel -and $progressBar) {
-                    $this.Enabled = $false
-                    $progressBar.Value = 0
-                    $statusLabel.Text = $global:Translations[$global:CurrentLanguage]["Initializing"]
-                    Start-Sleep -Milliseconds 500
-                    
-                    # Mise à jour de la progression pour la modification MAC
-                    $progressBar.Value = 10
-                    $statusLabel.Text = $global:Translations[$global:CurrentLanguage]["LoadingMacScript"]
-                    Start-Sleep -Milliseconds 500
-                    
-                    # Charger et exécuter le script MAC
-                    . "$PSScriptRoot\Step4_MacAddress.ps1"
-                    $progressBar.Value = 20
-                    $statusLabel.Text = $global:Translations[$global:CurrentLanguage]["GettingNetworkAdapter"]
-                    Start-Sleep -Milliseconds 500
-                    
-                    $adapter = Get-NetworkAdapters | Select-Object -First 1
-                    $macResult = $false
-                    if ($adapter) {
-                        $progressBar.Value = 30
-                        $statusLabel.Text = $global:Translations[$global:CurrentLanguage]["GeneratingMacAddress"]
-                        Start-Sleep -Milliseconds 500
-                        
-                        $newMac = New-MacAddress
-                        if ($newMac) {
-                            $progressBar.Value = 40
-                            $statusLabel.Text = $global:Translations[$global:CurrentLanguage]["ApplyingMacAddress"]
-                            Start-Sleep -Milliseconds 500
-                            
-                            $macResult = Set-MacAddress -AdapterName $adapter.Name -MacAddress $newMac
-                            if ($macResult) {
-                                $progressBar.Value = 50
-                                $statusLabel.Text = $global:Translations[$global:CurrentLanguage]["MacAddressModified"]
-                                Start-Sleep -Milliseconds 500
-                            }
-                        }
-                    }
-                    
-                    # Mise à jour de la progression pour la suppression du storage
-                    $progressBar.Value = 60
-                    $statusLabel.Text = $global:Translations[$global:CurrentLanguage]["LoadingFileManager"]
-                    Start-Sleep -Milliseconds 500
-                    
-                    # Charger et exécuter le script de suppression du storage
-                    $scriptPath = Join-Path $PSScriptRoot "Step5_FileManager.ps1"
-                    $storageResult = $false
-                    $storageMessage = "Le fichier storage.json n'existe pas"
-                    
-                    if (Test-Path $scriptPath) {
-                        $progressBar.Value = 70
-                        $statusLabel.Text = $global:Translations[$global:CurrentLanguage]["CheckingStorage"]
-                        Start-Sleep -Milliseconds 500
-                        
-                        . $scriptPath
-                        $progressBar.Value = 80
-                        $statusLabel.Text = $global:Translations[$global:CurrentLanguage]["DeletingStorage"]
-                        Start-Sleep -Milliseconds 500
-                        
-                        $result = Remove-CursorStorage
-                        $storageResult = $result.Success
-                        $storageMessage = $result.Message
-                        
-                        if ($storageResult) {
-                            $progressBar.Value = 90
-                            $statusLabel.Text = $global:Translations[$global:CurrentLanguage]["StorageDeleted"]
-                            Start-Sleep -Milliseconds 500
-                        }
-                    }
-                    
-                    # Mise à jour finale de la progression
-                    $progressBar.Value = 100
-                    $statusLabel.Text = $global:Translations[$global:CurrentLanguage]["ActionsCompleted"]
-                    Start-Sleep -Milliseconds 500
-                    
-                    # Créer la fenêtre de résumé avec les boutons
-                    $summaryForm = New-Object System.Windows.Forms.Form
-                    $summaryForm.Text = $global:Translations[$global:CurrentLanguage]["SummaryTitle"]
-                    $summaryForm.Size = New-Object System.Drawing.Size(400, 300)
-                    $summaryForm.StartPosition = "CenterScreen"
-                    $summaryForm.BackColor = [System.Drawing.Color]::FromArgb(30,30,30)
-                    $summaryForm.ForeColor = [System.Drawing.Color]::White
-                    $summaryForm.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::FixedSingle
-                    $summaryForm.MaximizeBox = $false
-                    $summaryForm.TopMost = $true
-                    
-                    # Label de résumé
-                    $summaryLabel = New-Object System.Windows.Forms.Label
-                    $summaryLabel.Text = @"
-$($global:Translations[$global:CurrentLanguage]["SummaryHeader"])
-
-$($global:Translations[$global:CurrentLanguage]["BtnMacAddress"]): $(if($macResult){$global:Translations[$global:CurrentLanguage]["MacSuccess"]}else{$global:Translations[$global:CurrentLanguage]["MacFailure"]})
-$($global:Translations[$global:CurrentLanguage]["BtnDeleteStorage"]): $(if($storageResult){$global:Translations[$global:CurrentLanguage]["StorageSuccess"]}else{$global:Translations[$global:CurrentLanguage]["StorageFailure"] + $storageMessage})
-
-$($global:Translations[$global:CurrentLanguage]["RegistrationPrompt"])
-"@
-                    $summaryLabel.Font = New-Object System.Drawing.Font("Segoe UI", 10)
-                    $summaryLabel.ForeColor = [System.Drawing.Color]::White
-                    $summaryLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
-                    $summaryLabel.Size = New-Object System.Drawing.Size(380, 120)
-                    $summaryLabel.Location = New-Object System.Drawing.Point(10, 20)
-                    $summaryForm.Controls.Add($summaryLabel)
-                    
-                    # Bouton Cursor
-                    $btnCursor = New-Object System.Windows.Forms.Button
-                    $btnCursor.Text = $global:Translations[$global:CurrentLanguage]["GoToCursor"]
-                    $btnCursor.Font = New-Object System.Drawing.Font("Segoe UI", 10)
-                    $btnCursor.Size = New-Object System.Drawing.Size(200, 35)
-                    $btnCursor.Location = New-Object System.Drawing.Point(100, 150)
-                    $btnCursor.BackColor = [System.Drawing.Color]::FromArgb(255,140,0)
-                    $btnCursor.ForeColor = [System.Drawing.Color]::White
-                    $btnCursor.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-                    $btnCursor.FlatAppearance.BorderSize = 1
-                    $btnCursor.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255,140,0)
-                    $btnCursor.Cursor = [System.Windows.Forms.Cursors]::Hand
-                    $btnCursor.Add_Click({
-                        Start-Process "https://cursor.com"
-                    })
-                    $summaryForm.Controls.Add($btnCursor)
-                    
-                    # Bouton Extension
-                    $btnExtension = New-Object System.Windows.Forms.Button
-                    $btnExtension.Text = $global:Translations[$global:CurrentLanguage]["TempEmails"]
-                    $btnExtension.Font = New-Object System.Drawing.Font("Segoe UI", 10)
-                    $btnExtension.Size = New-Object System.Drawing.Size(200, 35)
-                    $btnExtension.Location = New-Object System.Drawing.Point(100, 200)
-                    $btnExtension.BackColor = [System.Drawing.Color]::FromArgb(255,140,0)
-                    $btnExtension.ForeColor = [System.Drawing.Color]::White
-                    $btnExtension.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-                    $btnExtension.FlatAppearance.BorderSize = 1
-                    $btnExtension.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(255,140,0)
-                    $btnExtension.Cursor = [System.Windows.Forms.Cursors]::Hand
-                    $btnExtension.Add_Click({
-                        Start-Process "https://chromewebstore.google.com/detail/temporary-email-emailonde/mkpcaklladfpajiaikehdinfaabmnajh"
-                    })
-                    $summaryForm.Controls.Add($btnExtension)
-                    
-                    # Afficher la fenêtre de résumé
-                    $summaryForm.ShowDialog()
+                # Récupérer les labels d'informations réseau
+                if ($macPanel) {
+                    $macInfoLabelObj = $macPanel.Controls | Where-Object { $_ -is [System.Windows.Forms.RichTextBox] -and $_.Location.Y -eq 10 }
+                    $machineGuidLabelObj = $macPanel.Controls | Where-Object { $_ -is [System.Windows.Forms.RichTextBox] -and $_.Location.Y -eq 60 }
                 }
+                
+                # Réinitialiser la barre de progression
+                if ($script:progressBar -ne $null -and $script:statusLabel -ne $null) {
+                    Reset-ProgressBar -ProgressBar $script:progressBar -MessageLabel $script:statusLabel -PercentLabel $null
+                }
+                
+                # Vérifier si tous les scripts nécessaires sont disponibles
+                $step4Path = Join-Path -Path $PSScriptRoot -ChildPath "Step4_MacAddress.ps1"
+                $step5Path = Join-Path -Path $PSScriptRoot -ChildPath "Step5_FileManager.ps1"
+                $step7Path = Join-Path -Path $PSScriptRoot -ChildPath "Step7_RegistryManager.ps1"
+                
+                # Vérifier et charger chaque script
+                $scriptOk = $true
+                
+                if (-not (Test-Path $step4Path)) {
+                    Write-Host "❌ Script MAC non trouvé: $step4Path" -ForegroundColor Red
+                    $scriptOk = $false
+                } else {
+                    . $step4Path
+                    Write-Host "✓ Script MAC chargé" -ForegroundColor Green
+                }
+                
+                if (-not (Test-Path $step5Path)) {
+                    Write-Host "❌ Script FileManager non trouvé: $step5Path" -ForegroundColor Red
+                    $scriptOk = $false
+                } else {
+                    . $step5Path
+                    Write-Host "✓ Script FileManager chargé" -ForegroundColor Green
+                }
+                
+                if (-not (Test-Path $step7Path)) {
+                    Write-Host "❌ Script RegistryManager non trouvé: $step7Path" -ForegroundColor Red
+                    $scriptOk = $false
+                } else {
+                    . $step7Path
+                    Write-Host "✓ Script RegistryManager chargé" -ForegroundColor Green
+                }
+                
+                if (-not $scriptOk) {
+                    throw "Un ou plusieurs scripts nécessaires sont manquants"
+                }
+                
+                # Exécuter les actions avec la barre de progression
+                $macSuccess = $false
+                $storageSuccess = $false
+                $machineGuidSuccess = $false
+                $storageMessage = ""
+                
+                # Initialisation et suppression du fichier storage.json
+                Update-StepProgress -Step "Storage" -ProgressBar $script:progressBar -MessageLabel $script:statusLabel -PercentLabel $null
+                $storageResult = Remove-CursorStorage
+                $storageSuccess = $storageResult.Success
+                $storageMessage = $storageResult.Message
+                
+                # Mise à jour du statut dans l'interface utilisateur
+                if ($script:statusLabel -ne $null) {
+                    $script:statusLabel.Text = $storageResult.Message
+                }
+                
+                # Modification de l'adresse MAC
+                Update-StepProgress -Step "MAC" -ProgressBar $script:progressBar -MessageLabel $script:statusLabel -PercentLabel $null
+                
+                # Générer une nouvelle adresse MAC et l'appliquer
+                $adapter = Get-NetworkAdapters | Select-Object -First 1
+                if ($adapter) {
+                    $newMac = New-MacAddress
+                    if (Test-MacAddress -MacAddress $newMac) {
+                        $macSuccess = Set-MacAddress -AdapterName $adapter.Name -MacAddress $newMac
+                    }
+                }
+                
+                # 3. Modification MachineGuid
+                Update-StepProgress -Step "MachineGuid" -ProgressBar $script:progressBar -MessageLabel $script:statusLabel -PercentLabel $null
+                $guidResult = Reset-MachineGuid
+                $machineGuidSuccess = $guidResult.Success
+                
+                # Finaliser avec un message et 100%
+                Update-ProgressBar -Progress 100 -Message $global:Translations[$global:CurrentLanguage]["Completed"] -ProgressBar $script:progressBar -MessageLabel $script:statusLabel -PercentLabel $null
+                
+                # Attendre pour que la carte réseau redémarre (comme pour le bouton 1)
+                Start-Sleep -Seconds 10
+                
+                # Mise à jour des informations réseau avec réessais
+                $maxRetries = 5
+                $retryCount = 0
+                $updateSuccess = $false
+                
+                while ($retryCount -lt $maxRetries -and -not $updateSuccess) {
+                    try {
+                        if ($macInfoLabelObj -and $machineGuidLabelObj) {
+                            Update-NetworkInfo -infoLabel $macInfoLabelObj -guidLabel $machineGuidLabelObj
+                            $updateSuccess = $true
+                        }
+                    } catch {
+                        Write-Host "  ⚠️ Échec de la mise à jour des informations réseau, nouvel essai dans 3 secondes..." -ForegroundColor Yellow
+                        Start-Sleep -Seconds 3
+                    }
+                    $retryCount++
+                }
+                
+                # Afficher le résumé des actions
+                Show-ActionSummary -MacSuccess $macSuccess -StorageSuccess $storageSuccess -MachineGuidSuccess $machineGuidSuccess -StorageMessage $storageMessage -Owner $form
             }
             catch {
-                Write-Host "❌ Erreur lors de l'exécution: $_" -ForegroundColor Red
                 [System.Windows.Forms.MessageBox]::Show(
-                    $global:Translations[$global:CurrentLanguage]["ErrorOccurred"] + $_,
+                    "$($global:Translations[$global:CurrentLanguage["ErrorOccurred"]]): $_",
                     $global:Translations[$global:CurrentLanguage]["ErrorTitle"],
                     [System.Windows.Forms.MessageBoxButtons]::OK,
                     [System.Windows.Forms.MessageBoxIcon]::Error
                 )
             }
             finally {
-                if ($statusLabel -and $progressBar) {
+                # Réactiver le bouton actuel
                     $this.Enabled = $true
-                    $progressBar.Value = 0
-                    $statusLabel.Text = $global:Translations[$global:CurrentLanguage]["Ready"]
+                
+                # Réinitialiser la barre de progression
+                if ($script:progressBar -ne $null -and $script:statusLabel -ne $null) {
+                    Reset-ProgressBar -ProgressBar $script:progressBar -MessageLabel $script:statusLabel -PercentLabel $null
                 }
             }
         })
 
-        # Événement du bouton de langue
+        # Événement Machine Guid
+        $btnMachineGuid.Add_Click({
+            Write-Host "🖱️ Clic sur le bouton Modifier MachineGuid" -ForegroundColor Cyan
+            try {
+                # Réinitialiser la barre de progression
+                if ($script:progressBar -ne $null -and $script:statusLabel -ne $null) {
+                    Reset-ProgressBar -ProgressBar $script:progressBar -MessageLabel $script:statusLabel -PercentLabel $null
+                }
+                
+                # Récupérer le panneau MAC et ses contrôles
+                $form = $this.FindForm()
+                $macPanel = $form.Controls[0].Controls | Where-Object { $_ -is [System.Windows.Forms.Panel] -and $_.BackColor.R -eq 45 }
+                
+                if ($macPanel) {
+                    $macInfoLabelObj = $macPanel.Controls | Where-Object { $_ -is [System.Windows.Forms.RichTextBox] -and $_.Location.Y -eq 10 }
+                    $machineGuidLabelObj = $macPanel.Controls | Where-Object { $_ -is [System.Windows.Forms.RichTextBox] -and $_.Location.Y -eq 60 }
+                }
+                
+                # Initialiser et mettre à jour la barre de progression
+                Update-StepProgress -Step "Storage" -ProgressBar $script:progressBar -MessageLabel $script:statusLabel -PercentLabel $null
+                
+                Write-Host "  🔄 Modification du MachineGuid..." -ForegroundColor Gray
+                
+                # Mise à jour de la barre de progression - MachineGuid (75-100%)
+                Update-StepProgress -Step "MachineGuid" -ProgressBar $script:progressBar -MessageLabel $script:statusLabel -PercentLabel $null
+                
+                $result = Reset-MachineGuid
+                if ($result.Success) {
+                    # Finaliser la barre de progression
+                    Update-ProgressBar -Progress 100 -Message $global:Translations[$global:CurrentLanguage]["Completed"] -ProgressBar $script:progressBar -MessageLabel $script:statusLabel -PercentLabel $null
+                    
+                    [System.Windows.Forms.MessageBox]::Show(
+                        "MachineGuid modifié avec succès.`nAncien: $($result.OldValue)`nNouveau: $($result.NewValue)",
+                        $global:Translations[$global:CurrentLanguage]["SuccessTitle"],
+                        [System.Windows.Forms.MessageBoxButtons]::OK,
+                        [System.Windows.Forms.MessageBoxIcon]::Information
+                    )
+                    Write-Host "  ✓ MachineGuid modifié avec succès" -ForegroundColor Green
+                    # Mettre à jour les informations réseau après la modification
+                    if ($macInfoLabelObj -and $machineGuidLabelObj) {
+                        Update-NetworkInfo -infoLabel $macInfoLabelObj -guidLabel $machineGuidLabelObj
+                    }
+                } else {
+                    throw $result.Message
+                }
+                
+                # Restaurer le texte du label de statut après quelques secondes
+                Start-Sleep -Seconds 2
+                if ($script:progressBar -ne $null -and $script:statusLabel -ne $null) {
+                    Reset-ProgressBar -ProgressBar $script:progressBar -MessageLabel $script:statusLabel -PercentLabel $null
+                }
+            } catch {
+                [System.Windows.Forms.MessageBox]::Show(
+                    "$($global:Translations[$global:CurrentLanguage['ErrorOccurred']])$_",
+                    $global:Translations[$global:CurrentLanguage]["ErrorTitle"],
+                    [System.Windows.Forms.MessageBoxButtons]::OK,
+                    [System.Windows.Forms.MessageBoxIcon]::Error
+                )
+                Write-Host "  ❌ Erreur lors de la modification du MachineGuid: $_" -ForegroundColor Red
+            }
+        })
+
+        # Événement de langue
         $btnLang.Add_Click({
             try {
                 # Changer la langue
@@ -706,74 +1325,52 @@ $($global:Translations[$global:CurrentLanguage]["RegistrationPrompt"])
                     if ($control -is [System.Windows.Forms.Label]) {
                         if ($control.Tag -eq "titleLabel") {
                             $control.Text = $global:Translations[$global:CurrentLanguage]["MainTitle"]
-                            Write-Host "  ✓ Titre principal mis à jour" -ForegroundColor Green
                         }
                         elseif ($control.Tag -eq "numTitleLabel") {
                             $control.Text = $global:Translations[$global:CurrentLanguage]["numTitle"]
-                            Write-Host "  ✓ Numéro de version mis à jour" -ForegroundColor Green
                         }
                         elseif ($control.Tag -eq "freeTitleLabel") {
                             $control.Text = $global:Translations[$global:CurrentLanguage]["freeTitle"]
-                            Write-Host "  ✓ Titre d'essai gratuit mis à jour" -ForegroundColor Green
                         }
                         elseif ($control.Tag -eq "subtitleLabel1") {
                             $control.Text = $global:Translations[$global:CurrentLanguage]["Subtitle"]
-                            Write-Host "  ✓ Sous-titre mis à jour" -ForegroundColor Green
                         }
                         elseif ($control.Tag -eq "subtitleLabel2") {
                             $control.Text = $global:Translations[$global:CurrentLanguage]["CursorTitle"]
-                            Write-Host "  ✓ Titre Cursor mis à jour" -ForegroundColor Green
                         }
                         elseif ($control.Tag -eq "iconTitleLabel") {
                             $control.Text = $global:Translations[$global:CurrentLanguage]["iconTitle"]
-                            Write-Host "  ✓ Icône mis à jour" -ForegroundColor Green
                         }
-                        elseif ($control.Font.Size -eq 11) {  # Status label
+                        elseif ($control.Font.Size -eq 12) {  # Status label
                             $control.Text = $global:Translations[$global:CurrentLanguage]["Ready"]
-                            Write-Host "  ✓ Label de statut mis à jour" -ForegroundColor Green
                         }
                     }
-                    # Mise à jour des boutons
                     elseif ($control -is [System.Windows.Forms.Button]) {
                         if ($control.Tag -eq "btnMacAddress") {
                             $control.Text = $global:Translations[$global:CurrentLanguage]["BtnMacAddress"]
-                            Write-Host "  ✓ Bouton MAC Address mis à jour" -ForegroundColor Green
                         }
                         elseif ($control.Tag -eq "btnDeleteStorage") {
                             $control.Text = $global:Translations[$global:CurrentLanguage]["BtnDeleteStorage"]
-                            Write-Host "  ✓ Bouton Delete Storage mis à jour" -ForegroundColor Green
+                        }
+                        elseif ($control.Tag -eq "btnMachineGuid") {
+                            $control.Text = $global:Translations[$global:CurrentLanguage]["BtnMachineGuid"]
                         }
                         elseif ($control.Tag -eq "btnExecuteAll") {
                             $control.Text = $global:Translations[$global:CurrentLanguage]["BtnExecuteAll"]
-                            Write-Host "  ✓ Bouton Execute All mis à jour" -ForegroundColor Green
                         }
                         elseif ($control.Tag -eq "btnExit") {
                             $control.Text = $global:Translations[$global:CurrentLanguage]["BtnExit"]
-                            Write-Host "  ✓ Bouton Exit mis à jour" -ForegroundColor Green
                         }
                     }
-                    # Mise à jour des contrôles dans les panneaux
                     elseif ($control -is [System.Windows.Forms.Panel]) {
                         foreach ($subControl in $control.Controls) {
-                            if ($subControl -is [System.Windows.Forms.Label]) {
-                                if ($subControl.Font.Size -eq 20) {  # Label de l'adresse MAC
-                                    # Mettre à jour uniquement l'adresse MAC
-                                    $adapter = Get-NetworkAdapters | Select-Object -First 1
-                                    if ($adapter) {
-                                        $subControl.Text = $adapter.MacAddress
-                                        Write-Host "  ✓ Adresse MAC mise à jour" -ForegroundColor Green
-                                    }
-                                }
-                                elseif ($subControl.Font.Size -eq 10) {  # Label des informations réseau
-                                    $adapter = Get-NetworkAdapters | Select-Object -First 1
-                                    if ($adapter) {
-                                        $subControl.Text = "$($global:Translations[$global:CurrentLanguage]['NetworkCard']): $($adapter.Name)`n$($global:Translations[$global:CurrentLanguage]['MacAddress']):"
-                                        Write-Host "  ✓ Informations réseau mises à jour" -ForegroundColor Green
-                                    }
-                                    else {
-                                        $subControl.Text = $global:Translations[$global:CurrentLanguage]["NoNetwork"]
-                                        Write-Host "  ✓ Message réseau mis à jour" -ForegroundColor Green
-                                    }
+                            if ($subControl -is [System.Windows.Forms.RichTextBox]) {
+                                # Mettre à jour les informations réseau avec les RichTextBox
+                                $macInfoLabel = $control.Controls | Where-Object { $_ -is [System.Windows.Forms.RichTextBox] -and $_.Location.Y -eq 10 }
+                                $machineGuidLabel = $control.Controls | Where-Object { $_ -is [System.Windows.Forms.RichTextBox] -and $_.Location.Y -eq 60 }
+                                if ($macInfoLabel -and $machineGuidLabel) {
+                                    Update-NetworkInfo -infoLabel $macInfoLabel -guidLabel $machineGuidLabel
+                                    break
                                 }
                             }
                         }
@@ -786,40 +1383,11 @@ $($global:Translations[$global:CurrentLanguage]["RegistrationPrompt"])
             }
         })
 
-        # Initialisation des informations réseau
-        try {
-            $adapter = Get-NetworkAdapters | Select-Object -First 1
-            if ($adapter) {
-                # Label principal pour le texte descriptif
-                $macInfoLabel.Text = "$($global:Translations[$global:CurrentLanguage]['NetworkCard']): $($adapter.Name)`n$($global:Translations[$global:CurrentLanguage]['MacAddress']):"
-                $macInfoLabel.ForeColor = [System.Drawing.Color]::FromArgb(200,200,200)
-                $macInfoLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleRight
-                $macInfoLabel.Size = New-Object System.Drawing.Size(200,60)
-                $macInfoLabel.Location = New-Object System.Drawing.Point(10,10)
-                
-                # Label pour l'adresse MAC en orange
-                $macAddressLabel = New-Object System.Windows.Forms.Label
-                $macAddressLabel.Text = $adapter.MacAddress
-                $macAddressLabel.Font = New-Object System.Drawing.Font("Segoe UI", 20)
-                $macAddressLabel.ForeColor = [System.Drawing.Color]::FromArgb(255,140,0)
-                $macAddressLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleLeft
-                $macAddressLabel.Size = New-Object System.Drawing.Size(350,30)
-                $macAddressLabel.Location = New-Object System.Drawing.Point(220,30)
-                $macInfoPanel.Controls.Add($macAddressLabel)
-            } else {
-                $macInfoLabel.Text = $global:Translations[$global:CurrentLanguage]["NoNetwork"]
-                $macInfoLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
-                $macInfoLabel.Size = New-Object System.Drawing.Size(480,60)
-                $macInfoLabel.Location = New-Object System.Drawing.Point(10,10)
-            }
-        } catch {
-            $macInfoLabel.Text = $global:Translations[$global:CurrentLanguage]["NetworkError"]
-            $macInfoLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
-            $macInfoLabel.Size = New-Object System.Drawing.Size(480,60)
-            $macInfoLabel.Location = New-Object System.Drawing.Point(10,10)
-        }
+        # Mettre à jour les informations réseau
+        Update-NetworkInfo -infoLabel $macInfoLabel -guidLabel $machineGuidLabel
 
-        Write-Host "✓ Événements configurés" -ForegroundColor Green
+        # Réactiver le layout
+        $mainPanel.ResumeLayout($true)
 
         # Retourner l'interface avec tous les contrôles
         return @{
@@ -829,8 +1397,8 @@ $($global:Translations[$global:CurrentLanguage]["RegistrationPrompt"])
             DeleteStorageButton = $btnDeleteStorage
             ExecuteAllButton = $btnExecuteAll
             ExitButton = $btnExit
-            ProgressBar = $progressBar
-            StatusLabel = $statusLabel
+            ProgressBar = $script:progressBar
+            StatusLabel = $script:statusLabel
             MacInfoLabel = $macInfoLabel
         }
     }
@@ -842,8 +1410,21 @@ $($global:Translations[$global:CurrentLanguage]["RegistrationPrompt"])
 
 # Si le script est exécuté directement, créer et afficher l'interface
 if ($MyInvocation.InvocationName -ne '.') {
+    try {
+        # Forcer l'encodage UTF-8 avant de créer l'interface
+        if (Test-Path "$PSScriptRoot\Step2_UTF8.ps1") {
+            . "$PSScriptRoot\Step2_UTF8.ps1"
+            Set-ConsoleEncoding
+        }
+        
+        # Créer et afficher l'interface
     $interface = Initialize-MainWindow
-    $interface.Form.ShowDialog()
+        [System.Windows.Forms.Application]::EnableVisualStyles()
+        [System.Windows.Forms.Application]::Run($interface.Form)
+    }
+    catch {
+        Write-Host "❌ Erreur lors du lancement de l'interface: $_" -ForegroundColor Red
+    }
 } 
 
 

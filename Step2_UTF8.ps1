@@ -14,16 +14,16 @@ function Set-ConsoleEncoding {
 
         # Configurer l'encodage pour la console Windows
         $null = cmd /c '' # Vide le buffer de la console
-        chcp 850 | Out-Null # IBM850 (Multilingual - Latin I)
+        chcp 65001 | Out-Null # UTF-8
         
         # Configurer les encodages PowerShell
-        $OutputEncoding = [System.Text.Encoding]::GetEncoding(850)
-        [Console]::OutputEncoding = [System.Text.Encoding]::GetEncoding(850)
-        [Console]::InputEncoding = [System.Text.Encoding]::GetEncoding(850)
+        $OutputEncoding = [System.Text.Encoding]::UTF8
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+        [Console]::InputEncoding = [System.Text.Encoding]::UTF8
         
         # Définir l'encodage par défaut pour les fichiers
-        $PSDefaultParameterValues['Out-File:Encoding'] = 'Default'
-        $PSDefaultParameterValues['Set-Content:Encoding'] = 'Default'
+        $PSDefaultParameterValues['Out-File:Encoding'] = 'UTF8'
+        $PSDefaultParameterValues['Set-Content:Encoding'] = 'UTF8'
         
         # Nettoyer l'écran pour éviter les problèmes d'affichage
         Clear-Host

@@ -1,6 +1,6 @@
 # =================================================================
 # Fichier     : Step4_MacAddressGUI.ps1
-# Role        : Centre commercial principal de l'interface graphique
+# Role        : Interface graphique de gestion des adresses MAC
 # Magasins    : - Magasin des configurations (imports et setup)
 #               - Magasin des composants (interface graphique)
 #               - Magasin des événements (gestion des actions)
@@ -108,68 +108,68 @@ function Show-MacAddressWindow {
         $form.Controls.Add($selectLabel)
 
         # NE PAS SUPPRIMER - ComboBox pour la sélection de la carte réseau
-        $adapterComboBox = New-Object System.Windows.Forms.ComboBox
-        $adapterComboBox.Location = New-Object System.Drawing.Point(20,45)
-        $adapterComboBox.Size = New-Object System.Drawing.Size(460,30)
-        $adapterComboBox.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-        $adapterComboBox.BackColor = [System.Drawing.Color]::FromArgb(45,45,45)
-        $adapterComboBox.ForeColor = [System.Drawing.Color]::White
-        $adapterComboBox.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
-        $form.Controls.Add($adapterComboBox)
+        $networkAdapterComboBox = New-Object System.Windows.Forms.ComboBox
+        $networkAdapterComboBox.Location = New-Object System.Drawing.Point(20,45)
+        $networkAdapterComboBox.Size = New-Object System.Drawing.Size(460,30)
+        $networkAdapterComboBox.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+        $networkAdapterComboBox.BackColor = [System.Drawing.Color]::FromArgb(45,45,45)
+        $networkAdapterComboBox.ForeColor = [System.Drawing.Color]::White
+        $networkAdapterComboBox.DropDownStyle = [System.Windows.Forms.ComboBoxStyle]::DropDownList
+        $form.Controls.Add($networkAdapterComboBox)
 
         # NE PAS SUPPRIMER - Labels pour l'affichage de l'adresse MAC actuelle
-        $currentMacLabel = New-Object System.Windows.Forms.Label
-        $currentMacLabel.Text = "Adresse MAC actuelle:"
-        $currentMacLabel.Location = New-Object System.Drawing.Point(20,85)
-        $currentMacLabel.Size = New-Object System.Drawing.Size(460,20)
-        $currentMacLabel.ForeColor = [System.Drawing.Color]::White
-        $currentMacLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-        $form.Controls.Add($currentMacLabel)
+        $macAddressCurrentLabel = New-Object System.Windows.Forms.Label
+        $macAddressCurrentLabel.Text = "Adresse MAC actuelle:"
+        $macAddressCurrentLabel.Location = New-Object System.Drawing.Point(20,85)
+        $macAddressCurrentLabel.Size = New-Object System.Drawing.Size(460,20)
+        $macAddressCurrentLabel.ForeColor = [System.Drawing.Color]::White
+        $macAddressCurrentLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+        $form.Controls.Add($macAddressCurrentLabel)
 
-        $currentMacValue = New-Object System.Windows.Forms.Label
-        $currentMacValue.Location = New-Object System.Drawing.Point(20,105)
-        $currentMacValue.Size = New-Object System.Drawing.Size(460,20)
-        $currentMacValue.ForeColor = [System.Drawing.Color]::FromArgb(0,120,215)
-        $currentMacValue.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-        $form.Controls.Add($currentMacValue)
+        $macAddressCurrentValue = New-Object System.Windows.Forms.Label
+        $macAddressCurrentValue.Location = New-Object System.Drawing.Point(20,105)
+        $macAddressCurrentValue.Size = New-Object System.Drawing.Size(460,20)
+        $macAddressCurrentValue.ForeColor = [System.Drawing.Color]::FromArgb(0,120,215)
+        $macAddressCurrentValue.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+        $form.Controls.Add($macAddressCurrentValue)
 
         # NE PAS SUPPRIMER - Contrôles pour la nouvelle adresse MAC
-        $newMacLabel = New-Object System.Windows.Forms.Label
-        $newMacLabel.Text = "Nouvelle adresse MAC:"
-        $newMacLabel.Location = New-Object System.Drawing.Point(20,135)
-        $newMacLabel.Size = New-Object System.Drawing.Size(460,20)
-        $newMacLabel.ForeColor = [System.Drawing.Color]::White
-        $newMacLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-        $form.Controls.Add($newMacLabel)
+        $macAddressNewLabel = New-Object System.Windows.Forms.Label
+        $macAddressNewLabel.Text = "Nouvelle adresse MAC:"
+        $macAddressNewLabel.Location = New-Object System.Drawing.Point(20,135)
+        $macAddressNewLabel.Size = New-Object System.Drawing.Size(460,20)
+        $macAddressNewLabel.ForeColor = [System.Drawing.Color]::White
+        $macAddressNewLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+        $form.Controls.Add($macAddressNewLabel)
 
-        $macTextBox = New-Object System.Windows.Forms.TextBox
-        $macTextBox.Location = New-Object System.Drawing.Point(20,160)
-        $macTextBox.Size = New-Object System.Drawing.Size(300,25)
-        $macTextBox.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-        $macTextBox.BackColor = [System.Drawing.Color]::FromArgb(45,45,45)
-        $macTextBox.ForeColor = [System.Drawing.Color]::White
-        $form.Controls.Add($macTextBox)
+        $macAddressNewInput = New-Object System.Windows.Forms.TextBox
+        $macAddressNewInput.Location = New-Object System.Drawing.Point(20,160)
+        $macAddressNewInput.Size = New-Object System.Drawing.Size(300,25)
+        $macAddressNewInput.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+        $macAddressNewInput.BackColor = [System.Drawing.Color]::FromArgb(45,45,45)
+        $macAddressNewInput.ForeColor = [System.Drawing.Color]::White
+        $form.Controls.Add($macAddressNewInput)
 
         # NE PAS SUPPRIMER - Boutons d'action
-        $btnGenerate = New-Object System.Windows.Forms.Button
-        $btnGenerate.Text = "Générer une adresse MAC aléatoire"
-        $btnGenerate.Location = New-Object System.Drawing.Point(20,195)
-        $btnGenerate.Size = New-Object System.Drawing.Size(460,30)
-        $btnGenerate.ForeColor = [System.Drawing.Color]::White
-        $btnGenerate.BackColor = [System.Drawing.Color]::FromArgb(0,120,215)
-        $btnGenerate.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-        $btnGenerate.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-        $form.Controls.Add($btnGenerate)
+        $macAddressGenerateButton = New-Object System.Windows.Forms.Button
+        $macAddressGenerateButton.Text = "Générer une adresse MAC aléatoire"
+        $macAddressGenerateButton.Location = New-Object System.Drawing.Point(20,195)
+        $macAddressGenerateButton.Size = New-Object System.Drawing.Size(460,30)
+        $macAddressGenerateButton.ForeColor = [System.Drawing.Color]::White
+        $macAddressGenerateButton.BackColor = [System.Drawing.Color]::FromArgb(0,120,215)
+        $macAddressGenerateButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+        $macAddressGenerateButton.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+        $form.Controls.Add($macAddressGenerateButton)
 
-        $btnChange = New-Object System.Windows.Forms.Button
-        $btnChange.Text = "Appliquer le changement"
-        $btnChange.Location = New-Object System.Drawing.Point(20,235)
-        $btnChange.Size = New-Object System.Drawing.Size(460,30)
-        $btnChange.ForeColor = [System.Drawing.Color]::White
-        $btnChange.BackColor = [System.Drawing.Color]::FromArgb(60,60,60)
-        $btnChange.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
-        $btnChange.Font = New-Object System.Drawing.Font("Segoe UI", 9)
-        $form.Controls.Add($btnChange)
+        $macAddressApplyButton = New-Object System.Windows.Forms.Button
+        $macAddressApplyButton.Text = "Appliquer le changement"
+        $macAddressApplyButton.Location = New-Object System.Drawing.Point(20,235)
+        $macAddressApplyButton.Size = New-Object System.Drawing.Size(460,30)
+        $macAddressApplyButton.ForeColor = [System.Drawing.Color]::White
+        $macAddressApplyButton.BackColor = [System.Drawing.Color]::FromArgb(60,60,60)
+        $macAddressApplyButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+        $macAddressApplyButton.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+        $form.Controls.Add($macAddressApplyButton)
 
         # NE PAS SUPPRIMER - Label pour les messages d'erreur
         $errorLabel = New-Object System.Windows.Forms.Label
@@ -183,47 +183,69 @@ function Show-MacAddressWindow {
 
         #region Initialisation des données
         # NE PAS SUPPRIMER - Remplissage de la liste des adaptateurs
-        $adapters = Get-NetworkAdapters
-        foreach ($adapter in $adapters) {
-            $adapterComboBox.Items.Add($adapter.InterfaceDescription)
+        $networkAdapters = Get-NetworkAdapters
+        foreach ($adapter in $networkAdapters) {
+            # Créer une description simplifiée de l'adaptateur
+            $speedGbps = [math]::Round($adapter.Speed / 1000000000, 2)
+            $adapterInfo = "$($adapter.ProductName) - $speedGbps Gbps"
+            $networkAdapterComboBox.Items.Add($adapterInfo)
         }
-        if ($adapterComboBox.Items.Count -gt 0) {
-            $adapterComboBox.SelectedIndex = 0
-            $currentMacValue.Text = $adapters[0].MacAddress
+        if ($networkAdapterComboBox.Items.Count -gt 0) {
+            $networkAdapterComboBox.SelectedIndex = 0
+            $macAddressCurrentValue.Text = $networkAdapters[0].MacAddress
+        } else {
+            $errorLabel.Text = "Aucun adaptateur réseau physique trouvé"
+            $macAddressApplyButton.Enabled = $false
+            $macAddressGenerateButton.Enabled = $false
         }
         #endregion
 
         #region Configuration des événements
         # NE PAS SUPPRIMER - Événements de l'interface
-        $adapterComboBox.Add_SelectedIndexChanged({
-            $selectedAdapter = $adapters[$adapterComboBox.SelectedIndex]
-            $currentMacValue.Text = $selectedAdapter.MacAddress
+        $networkAdapterComboBox.Add_SelectedIndexChanged({
+            $selectedAdapter = $networkAdapters[$networkAdapterComboBox.SelectedIndex]
+            $macAddressCurrentValue.Text = $selectedAdapter.MacAddress
         })
 
-        $btnGenerate.Add_Click({
-            $macTextBox.Text = New-MacAddress
+        $macAddressGenerateButton.Add_Click({
+            $macAddressNewInput.Text = New-MacAddress
         })
 
-        $btnChange.Add_Click({
+        $macAddressApplyButton.Add_Click({
             $errorLabel.Text = ""
-            if ($adapterComboBox.SelectedItem -and $macTextBox.Text) {
+            if ($networkAdapterComboBox.SelectedItem -and $macAddressNewInput.Text) {
                 try {
-                    $selectedAdapter = $adapters[$adapterComboBox.SelectedIndex]
-                    $newMac = $macTextBox.Text
+                    $selectedAdapter = $networkAdapters[$networkAdapterComboBox.SelectedIndex]
+                    $newMacAddress = $macAddressNewInput.Text
                     
-                    if (Test-MacAddress -MacAddress $newMac) {
-                        $btnChange.Enabled = $false
-                        $btnChange.Text = "Modification en cours..."
+                    if (Test-MacAddress -MacAddress $newMacAddress) {
+                        $macAddressApplyButton.Enabled = $false
+                        $macAddressApplyButton.Text = "Modification en cours..."
                         $form.Cursor = [System.Windows.Forms.Cursors]::WaitCursor
                         
-                        $result = Set-MacAddress -AdapterName $selectedAdapter.Name -MacAddress $newMac
+                        # Ajouter journalisation détaillée
+                        Write-ConsoleLog "Tentative de modification d'adresse MAC pour $($selectedAdapter.Name)" -Color Cyan
+                        Write-ConsoleLog "Nouvelle adresse MAC: $newMacAddress" -Color Cyan
+                        
+                        $result = Set-MacAddress -AdapterName $selectedAdapter.Name -MacAddress $newMacAddress
                         if (-not $result) {
-                            $errorLabel.Text = "Error lors de la modification de l'adresse MAC. Vérifiez les logs dans la console."
-                        } else {
-                            $currentMacValue.Text = $newMac
+                            Write-ConsoleLog "Échec de la modification de l'adresse MAC" -Color Red
+                            $errorLabel.Text = "Échec de la modification de l'adresse MAC. Vérifiez les permissions administrateur."
+                            
+                            # Afficher une boîte de dialogue avec plus d'informations
                             [System.Windows.Forms.MessageBox]::Show(
-                                "L'adresse MAC a été modifiée avec succès.",
-                                "Success",
+                                "La modification de l'adresse MAC a échoué.`n`nAssurez-vous de :`n- Exécuter en tant qu'administrateur`n- Vérifier que l'adaptateur n'est pas utilisé par un autre programme`n`nConsultez les logs dans la console pour plus de détails.",
+                                "Erreur",
+                                [System.Windows.Forms.MessageBoxButtons]::OK,
+                                [System.Windows.Forms.MessageBoxIcon]::Error
+                            )
+                        } else {
+                            Write-ConsoleLog "Adresse MAC modifiée avec succès" -Color Green
+                            # Mettre à jour l'affichage et notifier le succès
+                            $macAddressCurrentValue.Text = $newMacAddress
+                            [System.Windows.Forms.MessageBox]::Show(
+                                "L'adresse MAC a été modifiée avec succès.`n`nNouvelle adresse: $newMacAddress",
+                                "Succès",
                                 [System.Windows.Forms.MessageBoxButtons]::OK,
                                 [System.Windows.Forms.MessageBoxIcon]::Information
                             )
@@ -233,12 +255,19 @@ function Show-MacAddressWindow {
                     }
                 }
                 catch {
-                    $errorLabel.Text = "Error: $_"
-                    Write-Host "Error détaillée: $($_.Exception.Message)" -ForegroundColor Red
+                    Write-ConsoleLog "Error détaillée: $($_.Exception.Message)" -Color Red
+                    $errorLabel.Text = "Error: $($_.Exception.Message)"
+                    
+                    [System.Windows.Forms.MessageBox]::Show(
+                        "Une erreur est survenue lors de la modification de l'adresse MAC:`n$($_.Exception.Message)`n`nVérifiez que vous exécutez l'application en tant qu'administrateur.",
+                        "Erreur",
+                        [System.Windows.Forms.MessageBoxButtons]::OK,
+                        [System.Windows.Forms.MessageBoxIcon]::Error
+                    )
                 }
                 finally {
-                    $btnChange.Enabled = $true
-                    $btnChange.Text = "Appliquer le changement"
+                    $macAddressApplyButton.Enabled = $true
+                    $macAddressApplyButton.Text = "Appliquer le changement"
                     $form.Cursor = [System.Windows.Forms.Cursors]::Default
                 }
             }

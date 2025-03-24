@@ -67,6 +67,9 @@ Add-Type -AssemblyName System.Drawing
 . "$PSScriptRoot\Step3_MacInfo.ps1"
 . "$PSScriptRoot\Step3_Interface.ps1"
 . "$PSScriptRoot\Step4_MacAddressGUI.ps1"
+. "$PSScriptRoot\Step5_FileManager.ps1"
+. "$PSScriptRoot\Step6_ExecuteAll.ps1"
+. "$PSScriptRoot\Step7_RegistryManager.ps1"
 
 # Point d'entrée principal
 if ($MyInvocation.InvocationName -ne '.' -and -not $env:TEST_MODE) {
