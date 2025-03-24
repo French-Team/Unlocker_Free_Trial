@@ -1,6 +1,17 @@
 # 🔓 Unlocker 3.2 - Free Trial for Cursor
-## Renouveler facilement les 3 essais gratuits dans Cursor
-### A lire jusqu'a la fin pour trouver le Bonus "Claude 3.7 sonnet" en illimité.
+
+
+> Renouveler facilement les 3 essais gratuits dans Cursor
+
+---
+<img src="docs/images/limited.PNG" alt="Interface Unlocker Free Trial" width="600"/>
+
+---
+
+
+> A lire jusqu'a la fin pour trouver le Bonus "Claude 3.7 sonnet" en illimité.
+
+***
 
 <div align="center">
 
@@ -14,7 +25,7 @@
 [🇫🇷 Français](#) | [🇬🇧 English](#) | [📖 Documentation](#) | [🐛 Issues](#)
 
 <img src="docs/images/unlocker.jpg" alt="Interface Unlocker Free Trial" width="600"/>
-<img src="docs/images/limited.PNG" alt="Interface Unlocker Free Trial" width="600"/>
+
 <img src="docs/images/interface.PNG" alt="Interface Unlocker Free Trial" width="600"/>
 <img src="docs/images/interface-EN.PNG" alt="Interface Unlocker Free Trial" width="600"/>
 
@@ -61,20 +72,20 @@ Pour une expérience optimale, utilisez toujours le fichier `launcher.bat` fourn
 
 ```
 1. Double-cliquez simplement sur `launcher.bat`
-2. L'interface graphique s'ouvrira directement, sans fenêtre console visible
+2. L'interface graphique s'ouvrira directement.
 ```
 
 ### Fonctionnalités principales
 
 L'interface propose 5 options principales :
 
-```
+
 1. **Modifier l'adresse MAC** - Change l'adresse MAC de votre carte réseau active
 2. **Supprimer storage.json** - Efface le fichier de stockage de Cursor contenant les informations d'essai
 3. **Modifier MachineGuid** - Change l'identifiant unique de votre machine dans le registre Windows
 4. **Exécuter toutes les actions** - Effectue les 3 opérations ci-dessus en séquence
 5. **Quitter** - Ferme l'application
-```
+
 
 Un résumé des actions effectuées est affiché après l'exécution groupée.
 
@@ -137,14 +148,14 @@ Distribué sous la licence MIT. Voir `LICENSE` pour plus d'informations.
 
 ## 📞 Contact
 
-French Team - french.team.ai@gmail.com
+French Team AI - french.team.ai@gmail.com
 
 <div align="center">
 
 [![GitHub stars](https://img.shields.io/github/stars/French-Team/Unlocker_Free_Trial?style=social)](https://github.com/French-Team/Unlocker_Free_Trial/stargazers)
 [![Follow](https://img.shields.io/github/followers/French-Team?style=social)](https://github.com/French-Team)
 
-*Made with ❤️ by French Team*
+*Made with ❤️ by French Team AI*
 
 </div>
 
