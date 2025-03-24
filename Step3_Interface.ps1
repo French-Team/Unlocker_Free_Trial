@@ -81,6 +81,7 @@ $global:Translations = @{
         "Completed" = "Terminé"
         "WaitingForNetwork" = "Attente du réseau..."
         "StorageNotFound" = "Le fichier storage.json n'existe pas."
+        "PreparingSummary" = "Préparation du résumé..."
     }
     "EN" = @{
         "WindowTitle" = "Unlocker - Free Trial"
@@ -137,6 +138,7 @@ $global:Translations = @{
         "Completed" = "Completed"
         "WaitingForNetwork" = "Waiting for network..."
         "StorageNotFound" = "The storage.json file does not exist."
+        "PreparingSummary" = "Preparing summary..."
     }
 }
 
@@ -817,9 +819,9 @@ function global:Initialize-MainWindow {
 
         # Label de statut
         $script:statusLabel = New-Object System.Windows.Forms.Label
-        $script:statusLabel.Location = New-Object System.Drawing.Point($buttonX, ($buttonStartY + $buttonSpacing * 5))
-        $script:statusLabel.Size = New-Object System.Drawing.Size($buttonWidth, 20)
-        $script:statusLabel.Font = New-Object System.Drawing.Font("Segoe UI", 9)
+        $script:statusLabel.Location = New-Object System.Drawing.Point($buttonX, ($buttonStartY + $buttonSpacing * 5 + 25))
+        $script:statusLabel.Size = New-Object System.Drawing.Size($buttonWidth, 25)
+        $script:statusLabel.Font = New-Object System.Drawing.Font("Segoe UI", 10)
         $script:statusLabel.ForeColor = [System.Drawing.Color]::White
         $script:statusLabel.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
         $script:statusLabel.BackColor = [System.Drawing.Color]::Transparent
@@ -1047,7 +1049,7 @@ function global:Initialize-MainWindow {
                 }
                 
                 # Mettre à jour le statut et initialiser la barre de progression
-                Update-StepProgress -Step "Initialization" -ProgressBar $script:progressBar -MessageLabel $script:statusLabel -PercentLabel $null
+                Update-StepProgress -Step "Storage" -ProgressBar $script:progressBar -MessageLabel $script:statusLabel -PercentLabel $null
                     
                     # Déterminer le chemin du script
                 $scriptPath = Join-Path -Path $PSScriptRoot -ChildPath "Step5_FileManager.ps1"
@@ -1198,13 +1200,20 @@ function global:Initialize-MainWindow {
                 $guidResult = Reset-MachineGuid
                 $machineGuidSuccess = $guidResult.Success
                 
-                # Finaliser avec un message et 100%
-                Update-ProgressBar -Progress 100 -Message $global:Translations[$global:CurrentLanguage]["Completed"] -ProgressBar $script:progressBar -MessageLabel $script:statusLabel -PercentLabel $null
+                # Indiquer que les actions principales sont terminées mais qu'une attente est nécessaire (90%)
+                Update-ProgressBar -Progress 90 -Message $global:Translations[$global:CurrentLanguage]["Completed"] -ProgressBar $script:progressBar -MessageLabel $script:statusLabel -PercentLabel $null
+                
+                # Informer l'utilisateur de l'attente nécessaire pour le redémarrage réseau
+                if ($script:statusLabel -ne $null) {
+                    $script:statusLabel.Text = $global:Translations[$global:CurrentLanguage]["WaitingForNetwork"]
+                }
                 
                 # Attendre pour que la carte réseau redémarre (comme pour le bouton 1)
                 Start-Sleep -Seconds 10
                 
-                # Mise à jour des informations réseau avec réessais
+                # Mise à jour des informations réseau avec réessais (95%)
+                Update-ProgressBar -Progress 95 -Message $global:Translations[$global:CurrentLanguage]["WaitingForNetwork"] -ProgressBar $script:progressBar -MessageLabel $script:statusLabel -PercentLabel $null
+                
                 $maxRetries = 5
                 $retryCount = 0
                 $updateSuccess = $false
@@ -1212,6 +1221,11 @@ function global:Initialize-MainWindow {
                 while ($retryCount -lt $maxRetries -and -not $updateSuccess) {
                     try {
                         if ($macInfoLabelObj -and $machineGuidLabelObj) {
+                            # Informer l'utilisateur de la tentative
+                            if ($script:statusLabel -ne $null) {
+                                $script:statusLabel.Text = "$($global:Translations[$global:CurrentLanguage]["WaitingForNetwork"]) ($($retryCount + 1)/$maxRetries)"
+                            }
+                            
                             Update-NetworkInfo -infoLabel $macInfoLabelObj -guidLabel $machineGuidLabelObj
                             $updateSuccess = $true
                         }
@@ -1220,6 +1234,18 @@ function global:Initialize-MainWindow {
                         Start-Sleep -Seconds 3
                     }
                     $retryCount++
+                }
+                
+                # Finaliser avec un message et 100%
+                Update-ProgressBar -Progress 100 -Message $global:Translations[$global:CurrentLanguage]["Completed"] -ProgressBar $script:progressBar -MessageLabel $script:statusLabel -PercentLabel $null
+                
+                # Afficher un message clair que le résumé va s'afficher
+                if ($script:statusLabel -ne $null) {
+                    $script:statusLabel.Text = $global:Translations[$global:CurrentLanguage]["PreparingSummary"]
+                    # Forcer la mise à jour de l'interface
+                    [System.Windows.Forms.Application]::DoEvents()
+                    # Court délai pour garantir la visibilité du message
+                    Start-Sleep -Milliseconds 500
                 }
                 
                 # Afficher le résumé des actions
