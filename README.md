@@ -144,6 +144,7 @@ Distribué sous la licence MIT. Voir `LICENSE` pour plus d'informations.
 ## 🔓 Extras: Débloquer/Unlocker la limitation dans Cursor de claude 3.7 Sonnet
 ```
 * Supprimer "machineid" dans "C:\Users\<a changer>\AppData\Roaming\Cursor\machineid
+* NEWS : si vous avez encore des problemes, eteindre "Cursor" , supprimer le dossier "logs" dans "C:\Users\<a changer>\AppData\Roaming\Cursor\logs" et redemarrer "Cursor"
 ```
 
 ## 📞 Contact
