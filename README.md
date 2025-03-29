@@ -144,6 +144,8 @@ Distribué sous la licence MIT. Voir `LICENSE` pour plus d'informations.
 ## 🔓 Extras: Débloquer/Unlocker la limitation dans Cursor de claude 3.7 Sonnet
 ```
 * Supprimer "machineid" dans "C:\Users\<a changer>\AppData\Roaming\Cursor\machineid"
+* Supprimer le dossier "sentry" aussi.
+* pour les problemes "email Temporaire détecté", utiliser "Proton Mail", connexion simple et rapide. (ne pas oublier ne mettre une email de récupération pour activé les emails pour cursor)
 ```
 
 ## 📞 Contact
